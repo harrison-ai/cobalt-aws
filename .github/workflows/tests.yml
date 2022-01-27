@@ -119,7 +119,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
-          components: deny
+      - run: cargo install cargo-deny
       - uses: actions-rs/cargo@v1
         with:
           command: deny
