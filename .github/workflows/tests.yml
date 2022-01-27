@@ -22,7 +22,6 @@ jobs:
         run: make test
 
 
-
   check-new:
     name: Check
     runs-on: ubuntu-latest
@@ -124,3 +123,12 @@ jobs:
         with:
           command: deny
           args: check
+
+
+  security_audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/audit-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
