@@ -1,0 +1,14 @@
+.vscode
+**/.DS_Store
+
+# Rust build artifacts.
+target
+
+# Terraform-related local state files.
+.env
+.terraform
+*terraform.tfstate*
+*.tfvars
+
+# https://doc.rust-lang.org/cargo/faq.html#why-do-binaries-have-cargolock-in-version-control-but-not-libraries
+Cargo.lock

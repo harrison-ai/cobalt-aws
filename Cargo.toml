@@ -1,0 +1,18 @@
+[package]
+name = "hai-aws"
+version = "0.1.0"
+authors = ["harrison.ai Data Engineering <dataengineering@harrison.ai>"]
+edition = "2021"
+description = "This library provides a collection of wrappers around the aws-sdk-rust packages."
+repository = "https://github.com/harrison-ai/hai-aws/"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+anyhow = "1.0.53"
+aws-config = "0.6.0"
+aws-sdk-s3 = "0.6.0"
+http = "0.2.6"
+serial_test = "0.5.1"
+tokio = { version = "1.15.0", features=["macros"] }
+tokio-test = "0.4.2"

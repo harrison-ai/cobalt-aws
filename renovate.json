@@ -1,0 +1,11 @@
+{
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["^aws-"],
+      "groupName": "aws-sdk"
+    }
+  ]
+}

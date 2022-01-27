@@ -1,0 +1,49 @@
+# See https://embarkstudios.github.io/cargo-deny/cli/init.html
+# for details on these configuration options.
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "warn"
+yanked = "warn"
+notice = "warn"
+ignore = [
+    # Like this:
+    #"RUSTSEC-YYYY-NNNN",
+]
+
+[licenses]
+default = "deny"
+unlicensed = "deny"
+copyleft = "deny"
+allow = [
+    "MIT",
+    "Apache-2.0",
+    # You can safely enable these licenses if needed:
+    "BSD-3-Clause",
+    "ISC",
+    "OpenSSL",
+]
+
+# The `ring` crate has a complicated license situation with different licenses
+# for different parts of the codebase, but they're all acceptable to us.
+# If you need the `ring` crate then uncomment the below.
+[[licenses.clarify]]
+name = "ring"
+version = "*"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]
+
+[licenses.private]
+# So we don't have to declare a license on our own unpublished crates.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = []
