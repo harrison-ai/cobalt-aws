@@ -15,7 +15,7 @@ pub use aws_sdk_s3::Client;
 ///
 /// ```
 /// use aws_config;
-/// use hai_aws::s3::get_client;
+/// use cobalt_aws::s3::get_client;
 ///
 /// # tokio_test::block_on(async {
 /// let shared_config = aws_config::load_from_env().await;

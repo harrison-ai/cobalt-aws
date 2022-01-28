@@ -1,11 +1,11 @@
-# The harrison.ai AWS wrapper library
+# The Cobalt AWS wrapper library
 
 This library provides a collection of wrappers around the [aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust) packages.
 
 These wrappers are intended to make it easier to perform common tasks when developing applications which run on AWS infrastructure.
 
-* [Changelog](https://github.com/harrison-ai/hai-aws/CHANGELOG.md)
-* [Documentation](https://docs.rs/hai-aws)
+* [Changelog](https://github.com/harrison-ai/cobalt-aws/CHANGELOG.md)
+* [Documentation](https://docs.rs/cobalt-aws)
 
 ### About harrison.ai
 
