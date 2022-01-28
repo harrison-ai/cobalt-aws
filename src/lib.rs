@@ -6,7 +6,7 @@
 //! These wrappers are intended to make it easier to perform common
 //! tasks when developing applications which run on AWS infrastructure.
 //!
-//! * [Changelog](https://github.com/harrison-ai/cobalt-aws/CHANGELOG.md)
+//! * [Changelog](https://github.com/harrison-ai/cobalt-aws/blob/main/CHANGELOG.md)
 //!
 //! ### About harrison.ai
 //!
