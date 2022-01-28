@@ -1,10 +1,10 @@
 [package]
-name = "hai-aws"
+name = "cobalt-aws"
 version = "0.1.0"
 authors = ["harrison.ai Data Engineering <dataengineering@harrison.ai>"]
 edition = "2021"
 description = "This library provides a collection of wrappers around the aws-sdk-rust packages."
-repository = "https://github.com/harrison-ai/hai-aws/"
+repository = "https://github.com/harrison-ai/cobalt-aws/"
 license = "Apache-2.0"
 publish = false
 
