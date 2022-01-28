@@ -6,7 +6,15 @@ edition = "2021"
 description = "This library provides a collection of wrappers around the aws-sdk-rust packages."
 repository = "https://github.com/harrison-ai/cobalt-aws/"
 license = "Apache-2.0"
-publish = false
+publish = true
+include = [
+    "Cargo.toml",
+    "src/*",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENCE",
+]
+
 
 [dependencies]
 anyhow = "1.0.53"
