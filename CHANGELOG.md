@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
- - Add `lambda::run_message_handler()`, which simplifies the task of writing a Lambda function which is triggered by an SQS event source mapping.
+ - Added `athena::get_client()`, which creates an Athena client with LocalStack support.
+ - Added `s3::get_object()`, which retrieves an object from S3 as an AsyncBufRead.
+ - Added `s3::list_objects()`, which performs a bucket listing, returning a stream of results.
+ - Added `s3::AsyncPutObjects`, which implements the AsyncWrite trait and writes data to S3 using the put_object API.
+ - Added `lambda::run_message_handler()`, which simplifies the task of writing a Lambda function which is triggered by an SQS event source mapping.
  - Moved test dependencies into `dev-dependencies`.
 
 ## 0.1.0

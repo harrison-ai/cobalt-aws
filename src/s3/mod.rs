@@ -15,6 +15,9 @@ use crate::localstack;
 ///
 pub use aws_sdk_s3::Client;
 
+mod async_put_object;
+pub use async_put_object::AsyncPutObject;
+
 /// Create an S3 client with LocalStack support.
 ///
 /// # Example
