@@ -206,53 +206,49 @@ where
     })()
     .await;
 
-    let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
-        .context("An error occured while parsing environment variable for handler")?;
-
-    lambda_runtime::run(service_fn(|event: LambdaEvent<SqsEvent>| async {
-        let (event, _context) = event.into_parts();
-        // Process the event and capture any errors
-        let result = (|| async {
-            // Check the result of the init phase. If it failed, log the message
-            // and immediately return.
-            let ctx = match &init_result {
-                Ok(x) => x,
-                Err(e) => {
-                    tracing::error!("{:?}", e);
-                    return Err(anyhow::anyhow!("Failed to initialise lambda."));
-                }
-            };
-
-            // Process the records in the event batch concurrently, up to `RECORD_CONCURRENCY`.
-            // If any of them fail, return immediately.
-            stream::iter(event.records)
-                .map(|record| {
-                    let body = record
-                        .body
-                        .as_ref()
-                        .with_context(|| format!("No SqsMessage body: {:?}", record))?;
-                    let msg = serde_json::from_str::<Msg>(body)
-                        .with_context(|| format!("Error parsing body into message: {}", body))?;
-                    Ok((msg, body.to_owned()))
-                })
-                .try_for_each_concurrent(handler_env.record_concurrency, |(msg, body)| {
-                    message_handler(msg, ctx.clone()).map(move |r| {
-                        r.with_context(|| format!("Error running message handler {}", body))
-                    })
-                })
-                .await
-        })()
-        .await;
-
-        // Log out the full error, as the lambda_runtime only logs the first line of the error
-        // message, which can hide crucial information.
-        match result {
-            Ok(_) => result,
-            Err(e) => {
+    match init_result {
+        // Initialisation failed, so every invocation just logs an error.
+        Err(e) => {
+            lambda_runtime::run(service_fn(|_event: LambdaEvent<SqsEvent>| async {
                 tracing::error!("{:?}", e);
-                Err(anyhow::anyhow!("Failed to process SQS event."))
-            }
+                return Err::<(), _>(anyhow::anyhow!("Failed to initialise lambda."));
+            }))
+            .await
         }
-    }))
-    .await
+        // Initialisation succeeded, we can actually invoke the provided handler.
+        Ok(ctx) => {
+            lambda_runtime::run(service_fn(|event: LambdaEvent<SqsEvent>| async {
+                let (event, _context) = event.into_parts();
+                // Process the event and capture any errors
+                let result = (|| async {
+                    // Process each of the records. If any of them fail, return immediately.
+                    for record in event.records {
+                        let body = record
+                            .body
+                            .as_ref()
+                            .with_context(|| format!("No SqsMessage body: {:?}", record))?;
+                        let msg = serde_json::from_str::<Msg>(body).with_context(|| {
+                            format!("Error parsing body into message: {}", body)
+                        })?;
+                        message_handler(msg, ctx.clone())
+                            .await
+                            .with_context(|| format!("Error running message handler: {}", body))?;
+                    }
+                    Ok(())
+                })()
+                .await;
+
+                // Log out the full error, as the lambda_runtime only logs the first line of the error
+                // message, which can hide crucial information.
+                match result {
+                    Ok(_) => result,
+                    Err(e) => {
+                        tracing::error!("{:?}", e);
+                        Err(anyhow::anyhow!("Failed to process SQS event."))
+                    }
+                }
+            }))
+            .await
+        }
+    }
 }
