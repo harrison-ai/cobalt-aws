@@ -54,7 +54,7 @@ pub trait LambdaContext<Env>: Sized {
     async fn from_env(env: &Env) -> Result<Self>;
 }
 
-/// Executes a message handler against all the message received in a batch
+/// Executes a message handler against all the messages received in a batch
 /// from an SQS event source mapping.
 ///
 /// The `run_message_handler` function takes care of the following tasks:
@@ -140,8 +140,8 @@ pub trait LambdaContext<Env>: Sized {
 /// # Error handling
 ///
 /// If any errors are raised during init, or from the `message_handler` function, then the entire message
-/// batch will be considered to have failed. Error messages will be logged in CloudWatch, and the message batch
-/// being processed will be returned to the original queue.
+/// batch will be considered to have failed. Error messages will be logged to stdout in a format compatible
+/// with CloudWatch, and the message batch being processed will be returned to the original queue.
 pub async fn run_message_handler<F, Fut, Msg, Context, Env>(message_handler: F) -> Result<(), Error>
 where
     F: Fn(Msg, Arc<Context>) -> Fut,
