@@ -1,6 +1,6 @@
 # The Cobalt AWS wrapper library
 
-This library provides a collection of wrappers around the [aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust) packages.
+This library provides a collection of wrappers around the [aws-sdk-rust](https://github.com/awslabs/aws-sdk-rust) and [lambda_runtime](https://github.com/awslabs/aws-lambda-rust-runtime) packages.
 
 These wrappers are intended to make it easier to perform common tasks when developing applications which run on AWS infrastructure.
 
