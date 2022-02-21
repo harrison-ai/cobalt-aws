@@ -14,15 +14,20 @@ jobs:
       - name: Start LocalStack
         env:
           LOCALSTACK_API_KEY: ${{ secrets.LOCALSTACK_API_KEY }}
+          LAMBDA_EXECUTOR: "docker"
         run: |
           # install LocalStack cli and awslocal
           pip install localstack awscli-local[ver1]
           # Make sure to pull the latest version of the image
           docker pull localstack/localstack:0.14.0
       - name: Run hello world example
+        env:
+          LOCALSTACK_API_KEY: ${{ secrets.LOCALSTACK_API_KEY }}
+          LAMBDA_EXECUTOR: "docker"
         run: |
           # TODO: This script currently runs without a failure, however
           # it is not generating the logs we expect. This needs further investigation.
           ./scripts/run_example.sh
-          sleep 5
+          sleep 10
+          localstack logs
           ./scripts/read_logs.sh
