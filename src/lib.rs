@@ -19,6 +19,7 @@
 
 // Public modules
 
+pub mod athena;
 pub mod lambda;
 pub mod s3;
 
