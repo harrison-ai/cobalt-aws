@@ -1,11 +1,13 @@
 //! A collection of wrappers around the [aws_sdk_s3](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/) crate.
 
 use anyhow::Result;
-use aws_sdk_s3::error::ListObjectsV2Error;
+use aws_sdk_s3::error::{GetObjectError, ListObjectsV2Error};
 use aws_sdk_s3::types::SdkError;
 use aws_sdk_s3::{config, model, Endpoint};
+use core::fmt::Debug;
 use futures::stream;
-use futures::stream::{Stream, TryStreamExt};
+use futures::stream::Stream;
+use futures::{AsyncBufRead, TryStreamExt};
 
 use crate::localstack;
 
@@ -104,14 +106,42 @@ pub fn list_objects(
         .try_flatten()
 }
 
+/// Retrieve an object from S3 as an `AsyncBufRead`.
+///
+/// # Example
+///
+/// ```no_run
+/// use aws_config;
+/// use cobalt_aws::s3::{get_client, get_object};
+/// use futures::AsyncReadExt;
+///
+/// # tokio_test::block_on(async {
+/// let shared_config = aws_config::load_from_env().await;
+/// let client = get_client(&shared_config).unwrap();
+/// let mut reader = get_object(&client, "my-bucket", "my-key").await.unwrap();
+/// let mut buffer = String::new();
+/// reader.read_to_string(&mut buffer).await.unwrap();
+/// println!("{}", buffer);
+/// # })
+/// ```
+pub async fn get_object(
+    client: &Client,
+    bucket: &str,
+    key: &str,
+) -> Result<impl AsyncBufRead + Debug, SdkError<GetObjectError>> {
+    let req = client.get_object().bucket(bucket).key(key);
+    let resp = req.send().await?;
+    Ok(resp
+        .body
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        .into_async_read())
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-
     use aws_config;
-    use futures::TryStreamExt;
     use serial_test::serial;
-    use std::error::Error;
     use tokio;
 
     #[tokio::test]
@@ -120,6 +150,16 @@ mod test {
         let shared_config = aws_config::load_from_env().await;
         get_client(&shared_config).unwrap();
     }
+}
+
+#[cfg(test)]
+mod test_list_objects {
+    use super::*;
+    use aws_config;
+    use futures::TryStreamExt;
+    use serial_test::serial;
+    use std::error::Error;
+    use tokio;
 
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
@@ -246,5 +286,72 @@ mod test {
         let stream = list_objects(&client, "test-bucket", Some("multi-page".into()));
         let results = stream.try_collect::<Vec<_>>().await.unwrap();
         assert_eq!(results.len(), 2500);
+    }
+}
+#[cfg(test)]
+mod test_get_object {
+    use super::*;
+    use aws_config;
+    use futures::AsyncReadExt;
+    use serial_test::serial;
+    use std::error::Error;
+    use tokio;
+
+    async fn localstack_test_client() -> Client {
+        localstack::test_utils::wait_for_localstack().await;
+        let shared_config = aws_config::load_from_env().await;
+        get_client(&shared_config).unwrap()
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_non_existant_bucket() {
+        let client = localstack_test_client().await;
+        let e = get_object(&client, "non-existant-bucket", "my-object")
+            .await
+            .unwrap_err();
+        let e = e
+            .source()
+            .unwrap()
+            .downcast_ref::<GetObjectError>()
+            .unwrap();
+
+        assert!(matches!(
+            e.kind,
+            aws_sdk_s3::error::GetObjectErrorKind::Unhandled(_)
+        ));
+        assert_eq!(e.code(), Some("NoSuchBucket"));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_non_existant_key() {
+        let client = localstack_test_client().await;
+        let e = get_object(&client, "test-bucket", "non-existing-object")
+            .await
+            .unwrap_err();
+        let e = e
+            .source()
+            .unwrap()
+            .downcast_ref::<GetObjectError>()
+            .unwrap();
+
+        assert!(matches!(
+            e.kind,
+            aws_sdk_s3::error::GetObjectErrorKind::NoSuchKey(_)
+        ));
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_existing_key() {
+        let client = localstack_test_client().await;
+        let mut reader = get_object(&client, "test-bucket", "test.txt")
+            .await
+            .unwrap();
+        let mut buffer = String::new();
+        let bytes = reader.read_to_string(&mut buffer).await.unwrap();
+        assert_eq!(buffer, "test data\n");
+        assert_eq!(bytes, 10);
     }
 }
