@@ -10,9 +10,14 @@ use std::pin::Pin;
 
 use crate::s3::Client;
 
+// Tracks the state of the AsyncWrite lifecycle for an AsyncPutObject.
 enum PutObjectState<'a> {
+    // Open for writing. Can call .write(), .flush(), or .close().
     Writing,
+    // In the process of writing the data to s3. We store the future which is performing
+    // the pub_object operation.
     Closing(Pin<Box<dyn Future<Output = Result<PutObjectOutput, SdkError<PutObjectError>>> + 'a>>),
+    // We have completed writing to s3.
     Closed,
 }
 
