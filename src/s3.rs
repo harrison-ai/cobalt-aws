@@ -112,19 +112,19 @@ pub fn list_objects(
 ///
 /// ```no_run
 /// use aws_config;
-/// use cobalt_aws::s3::{get_client, async_get_object};
+/// use cobalt_aws::s3::{get_client, get_object};
 /// use futures::AsyncReadExt;
 ///
 /// # tokio_test::block_on(async {
 /// let shared_config = aws_config::load_from_env().await;
 /// let client = get_client(&shared_config).unwrap();
-/// let mut reader = async_get_object(&client, "my-bucket", "my-key").await.unwrap();
+/// let mut reader = get_object(&client, "my-bucket", "my-key").await.unwrap();
 /// let mut buffer = String::new();
 /// reader.read_to_string(&mut buffer).await.unwrap();
 /// println!("{}", buffer);
 /// # })
 /// ```
-pub async fn async_get_object(
+pub async fn get_object(
     client: &Client,
     bucket: &str,
     key: &str,
@@ -289,7 +289,7 @@ mod test_list_objects {
     }
 }
 #[cfg(test)]
-mod test_async_get_object {
+mod test_get_object {
     use super::*;
     use aws_config;
     use futures::AsyncReadExt;
@@ -307,7 +307,7 @@ mod test_async_get_object {
     #[serial]
     async fn test_non_existant_bucket() {
         let client = localstack_test_client().await;
-        let e = async_get_object(&client, "non-existant-bucket", "my-object")
+        let e = get_object(&client, "non-existant-bucket", "my-object")
             .await
             .unwrap_err();
         let e = e
@@ -327,7 +327,7 @@ mod test_async_get_object {
     #[serial]
     async fn test_non_existant_key() {
         let client = localstack_test_client().await;
-        let e = async_get_object(&client, "test-bucket", "non-existing-object")
+        let e = get_object(&client, "test-bucket", "non-existing-object")
             .await
             .unwrap_err();
         let e = e
@@ -346,7 +346,7 @@ mod test_async_get_object {
     #[serial]
     async fn test_existing_key() {
         let client = localstack_test_client().await;
-        let mut reader = async_get_object(&client, "test-bucket", "test.txt")
+        let mut reader = get_object(&client, "test-bucket", "test.txt")
             .await
             .unwrap();
         let mut buffer = String::new();
