@@ -73,14 +73,20 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
                 self.buf.extend(buf);
                 Poll::Ready(Ok(buf.len()))
             }
-            _ => Poll::Ready(Err(Error::new(ErrorKind::Other, "bad poll_write"))),
+            _ => Poll::Ready(Err(Error::new(
+                ErrorKind::Other,
+                "Attempted to .write() writer after .close().",
+            ))),
         }
     }
 
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
         match self.state {
             PutObjectState::Writing => Poll::Ready(Ok(())),
-            _ => Poll::Ready(Err(Error::new(ErrorKind::Other, "bad poll_flush"))),
+            _ => Poll::Ready(Err(Error::new(
+                ErrorKind::Other,
+                "Attempted to .flush() writer after .close().",
+            ))),
         }
     }
 
@@ -120,9 +126,10 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
                     }
                 }
             }
-            PutObjectState::Closed => {
-                Poll::Ready(Err(Error::new(ErrorKind::Other, "bad poll_close")))
-            }
+            PutObjectState::Closed => Poll::Ready(Err(Error::new(
+                ErrorKind::Other,
+                "Attempted to .close() writer twice.",
+            ))),
         }
     }
 }
@@ -179,6 +186,39 @@ mod test_async_put_object {
             .unwrap();
         reader.read_to_string(&mut buffer).await.unwrap();
         assert_eq!(buffer, "File contents");
+
+        // Clean up
+        client
+            .delete_object()
+            .bucket("test-bucket")
+            .key("test-output.txt")
+            .send()
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_after_close_errors() {
+        let client = localstack_test_client().await;
+        let mut writer = AsyncPutObject::new(&client, "test-bucket", "test-output.txt");
+        writer.write_all(b"File contents").await.unwrap();
+        writer.close().await.unwrap();
+
+        let e = writer.close().await.unwrap_err();
+        assert_eq!(e.to_string(), "Attempted to .close() writer twice.");
+
+        let e = writer.flush().await.unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "Attempted to .flush() writer after .close()."
+        );
+
+        let e = writer.write_all(b"More content").await.unwrap_err();
+        assert_eq!(
+            e.to_string(),
+            "Attempted to .write() writer after .close()."
+        );
 
         // Clean up
         client
