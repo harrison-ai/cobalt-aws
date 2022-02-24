@@ -106,12 +106,8 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
                     .body(mem::take(&mut self.buf).into())
                     .acl(ObjectCannedAcl::BucketOwnerFullControl)
                     .send();
-                self.state = PutObjectState::Closing(Box::pin(fut));
-                cx.waker().wake_by_ref();
-                Poll::Pending
-            }
-            PutObjectState::Closing(ref mut fut) => {
-                match Pin::new(fut).poll(cx) {
+                let mut fut = Box::pin(fut);
+                match Pin::new(&mut fut).poll(cx) {
                     Poll::Ready(x) => {
                         self.state = PutObjectState::Closed;
                         match x {
@@ -120,12 +116,21 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
                         }
                     }
                     Poll::Pending => {
-                        // Tell the async executor that we're ready to try again whenever it is!
-                        cx.waker().wake_by_ref();
+                        self.state = PutObjectState::Closing(fut);
                         Poll::Pending
                     }
                 }
             }
+            PutObjectState::Closing(ref mut fut) => match Pin::new(fut).poll(cx) {
+                Poll::Ready(x) => {
+                    self.state = PutObjectState::Closed;
+                    match x {
+                        Ok(_) => Poll::Ready(Ok(())),
+                        Err(e) => Poll::Ready(Err(Error::new(ErrorKind::Other, e))),
+                    }
+                }
+                Poll::Pending => Poll::Pending,
+            },
             PutObjectState::Closed => Poll::Ready(Err(Error::new(
                 ErrorKind::Other,
                 "Attempted to .close() writer twice.",
