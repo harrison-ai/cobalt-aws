@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Reduced spurious task wake-ups when closing an `s3::AsyncPutObject`.
+
 ## 0.2.0
 
  - Added `athena::get_client()`, which creates an Athena client with LocalStack support.
