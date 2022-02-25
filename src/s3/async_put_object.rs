@@ -4,7 +4,7 @@ use aws_sdk_s3::output::PutObjectOutput;
 use aws_sdk_s3::types::SdkError;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
-use futures::{AsyncWrite, Future};
+use futures::{ready, AsyncWrite, Future};
 use std::mem;
 use std::pin::Pin;
 
@@ -106,31 +106,19 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
                     .body(mem::take(&mut self.buf).into())
                     .acl(ObjectCannedAcl::BucketOwnerFullControl)
                     .send();
-                let mut fut = Box::pin(fut);
-                match Pin::new(&mut fut).poll(cx) {
-                    Poll::Ready(x) => {
-                        self.state = PutObjectState::Closed;
-                        match x {
-                            Ok(_) => Poll::Ready(Ok(())),
-                            Err(e) => Poll::Ready(Err(Error::new(ErrorKind::Other, e))),
-                        }
-                    }
-                    Poll::Pending => {
-                        self.state = PutObjectState::Closing(fut);
-                        Poll::Pending
-                    }
-                }
+                self.state = PutObjectState::Closing(Box::pin(fut));
+                // Manually trigger a wake so that the executor immediately
+                // polls us again, which will take us into the `Closing` block.
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
-            PutObjectState::Closing(ref mut fut) => match Pin::new(fut).poll(cx) {
-                Poll::Ready(x) => {
-                    self.state = PutObjectState::Closed;
-                    match x {
-                        Ok(_) => Poll::Ready(Ok(())),
-                        Err(e) => Poll::Ready(Err(Error::new(ErrorKind::Other, e))),
-                    }
-                }
-                Poll::Pending => Poll::Pending,
-            },
+            PutObjectState::Closing(ref mut fut) => {
+                let result = ready!(Pin::new(fut).poll(cx))
+                    .map(|_| ())
+                    .map_err(|e| Error::new(ErrorKind::Other, e));
+                self.state = PutObjectState::Closed;
+                Poll::Ready(result)
+            }
             PutObjectState::Closed => Poll::Ready(Err(Error::new(
                 ErrorKind::Other,
                 "Attempted to .close() writer twice.",
