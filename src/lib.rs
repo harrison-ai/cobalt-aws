@@ -22,6 +22,7 @@
 pub mod athena;
 pub mod lambda;
 pub mod s3;
+pub mod sqs;
 
 // Internal shared modules
 mod localstack;
