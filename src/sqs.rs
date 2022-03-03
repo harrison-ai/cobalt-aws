@@ -104,7 +104,7 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
         .send()
         .await?
         .queue_url
-        .ok_or_else(|| anyhow::anyhow!("Failed to get queue URL for {queue_name}"))?;
+        .ok_or_else(|| anyhow::anyhow!("Failed to get queue URL for {}", queue_name))?;
     msg_stream
         .map(|msg| Ok::<_, anyhow::Error>(serde_json::to_string(&msg?)?))
         .enumerate()
@@ -286,7 +286,7 @@ mod test_send_messages_concurrently {
     async fn test_concurrent() {
         let client = localstack_test_client().await;
 
-        let item_stream = stream::iter((0..250).map(Ok));
+        let item_stream = stream::iter((0..105).map(Ok));
 
         let queue_name = "test-queue";
 
@@ -294,7 +294,7 @@ mod test_send_messages_concurrently {
         result.unwrap();
 
         let values = consume_queue(&client, queue_name).await;
-        assert_eq!(values, (0..250).collect::<Vec<_>>());
+        assert_eq!(values, (0..105).collect::<Vec<_>>());
     }
 
     #[tokio::test]
@@ -302,7 +302,7 @@ mod test_send_messages_concurrently {
     async fn test_zero_concurrency() {
         let client = localstack_test_client().await;
 
-        let item_stream = stream::iter((0..250).map(Ok));
+        let item_stream = stream::iter((0..105).map(Ok));
 
         let queue_name = "test-queue";
 
