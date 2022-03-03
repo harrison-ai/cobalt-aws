@@ -21,4 +21,6 @@ set -x
 awslocal s3 mb s3://test-bucket
 awslocal s3 cp /tmp/test-data s3://test-bucket --recursive
 
+awslocal sqs create-queue --queue-name test-queue
+
 printf "Configuration done"

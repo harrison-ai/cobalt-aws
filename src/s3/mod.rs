@@ -82,7 +82,7 @@ pub fn get_client(shared_config: &aws_config::Config) -> Result<Client> {
 /// # })
 /// ```
 ///
-///  # Implementation details
+/// # Implementation details
 ///
 /// This function uses the [ListObjectsV2](https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html)
 /// API and performs pagination to ensure all objects are returned.
