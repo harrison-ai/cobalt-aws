@@ -15,7 +15,7 @@ pub use aws_sdk_sqs::Client;
 ///
 /// ```
 /// use aws_config;
-/// use cobalt_aws::sqs:get_client;
+/// use cobalt_aws::sqs::get_client;
 ///
 /// # tokio_test::block_on(async {
 /// let shared_config = aws_config::load_from_env().await;
