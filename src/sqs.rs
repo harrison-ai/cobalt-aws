@@ -64,7 +64,7 @@ const BATCH_SIZE: usize = 10;
 /// in the stream, or while processing the stream, are returned as soon as they are encountered.
 ///
 /// If `concurrency` is `None` then message batches are sent sequentially. A `concurrency` value of
-/// zero, `Some(0)`, is not allowed.
+/// zero, `Some(0)`, is not allowed and will result in an error.
 ///
 /// # Example
 ///
@@ -86,6 +86,7 @@ const BATCH_SIZE: usize = 10;
 /// ```
 ///
 /// # Implementation details
+///
 /// This function uses the [SendMessageBatch](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/APIReference/API_SendMessageBatch.html)
 /// API to send message in batches of 10, which is the maximum allowed batch size.
 pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item = Result<Msg>>>(
@@ -103,7 +104,7 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
         .send()
         .await?
         .queue_url
-        .ok_or(anyhow::anyhow!("Missing queue name"))?;
+        .ok_or_else(|| anyhow::anyhow!("Failed to get queue URL for {queue_name}"))?;
     msg_stream
         .map(|msg| Ok::<_, anyhow::Error>(serde_json::to_string(&msg?)?))
         .enumerate()
@@ -149,7 +150,7 @@ mod test {
 }
 
 #[cfg(test)]
-mod test_list_objects {
+mod test_send_messages_concurrently {
     use super::*;
     use aws_config;
     use aws_sdk_sqs::error::GetQueueUrlError;
