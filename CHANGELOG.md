@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Added `sqs::get_client()`, which creates an SQS client with LocalStack support.
  - Reduced spurious task wake-ups when closing an `s3::AsyncPutObject`.
+ - Updated `aws-sdk-*` dependencies to `0.8.0`.
 
 ## 0.2.0
 
