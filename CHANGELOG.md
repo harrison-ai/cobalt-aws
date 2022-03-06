@@ -6,7 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
- - Added `sqs::send_messages_concurrently`, which sends a stream of messages to an SQS queue.
+## 0.3.0
+
+ - Added `sqs::send_messages_concurrently()`, which sends a stream of messages to an SQS queue.
  - Added `sqs::get_client()`, which creates an SQS client with LocalStack support.
  - Reduced spurious task wake-ups when closing an `s3::AsyncPutObject`.
  - Updated `aws-sdk-*` dependencies to `0.8.0`.
