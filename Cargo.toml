@@ -30,7 +30,7 @@ lambda_runtime = "0.5.0"
 serde = "1.0.136"
 serde_json = "1.0.79"
 tokio = { version = "1.17.0", features=["macros"] }
-tracing = "0.1.31"
+tracing = "0.1.32"
 tracing-subscriber = { version = "0.3.9", features=["json", "env-filter"] }
 
 [dev-dependencies]
