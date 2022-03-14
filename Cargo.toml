@@ -34,6 +34,6 @@ tracing = "0.1.32"
 tracing-subscriber = { version = "0.3.9", features=["json", "env-filter"] }
 
 [dev-dependencies]
-reqwest = { version = "0.11.9", features=["json"] }
+reqwest = { version = "0.11.10", features=["json"] }
 serial_test = "0.6.0"
 tokio-test = "0.4.2"
