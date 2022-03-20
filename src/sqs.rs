@@ -3,6 +3,7 @@
 use anyhow::Result;
 use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
 use aws_sdk_sqs::{config, Endpoint};
+use aws_types::SdkConfig;
 use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
 
 use crate::localstack;
@@ -48,7 +49,7 @@ pub use aws_sdk_sqs::Client;
 ///
 /// An error will be returned if `LOCALSTACK_HOSTNAME` is set and a valid URI cannot be constructed.
 ///
-pub fn get_client(shared_config: &aws_config::Config) -> Result<Client> {
+pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
     let mut builder = config::Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
         builder = builder.endpoint_resolver(Endpoint::immutable(uri));
