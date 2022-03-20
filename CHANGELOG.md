@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Updated `aws-sdk-*` dependencies to `0.9.0`.
+
 ## 0.3.0
 
  - Added `sqs::send_messages_concurrently()`, which sends a stream of messages to an SQS queue.

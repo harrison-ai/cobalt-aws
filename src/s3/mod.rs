@@ -4,6 +4,7 @@ use anyhow::Result;
 use aws_sdk_s3::error::{GetObjectError, ListObjectsV2Error};
 use aws_sdk_s3::types::SdkError;
 use aws_sdk_s3::{config, model, Endpoint};
+use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
 use futures::stream::Stream;
@@ -55,7 +56,7 @@ pub use async_put_object::AsyncPutObject;
 ///
 /// An error will be returned if `LOCALSTACK_HOSTNAME` is set and a valid URI cannot be constructed.
 ///
-pub fn get_client(shared_config: &aws_config::Config) -> Result<Client> {
+pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
     let mut builder = config::Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
         builder = builder.endpoint_resolver(Endpoint::immutable(uri));
