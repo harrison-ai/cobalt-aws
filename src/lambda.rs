@@ -62,7 +62,7 @@ struct HandlerEnv {
     /// How manny concurrent records should be processed at once.
     /// See EventSourceMapping to set number of records in a batch
     /// by setting BatchSize.
-    /// This defaults to 1 to set synchronous processing 
+    /// This defaults to 1 to set synchronous processing
     #[clap(env, default_value_t = 1)]
     record_concurrency: usize,
 }
