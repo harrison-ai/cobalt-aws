@@ -7,6 +7,8 @@ use anyhow::{Context as _, Result};
 use async_trait::async_trait;
 use aws_lambda_events::event::sqs::SqsEvent;
 use clap::Parser;
+use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::FutureExt;
 use lambda_runtime::{service_fn, LambdaEvent};
 use std::future::Future;
 use std::sync::Arc;
@@ -52,6 +54,17 @@ pub trait LambdaContext<Env>: Sized {
     /// }
     /// ```
     async fn from_env(env: &Env) -> Result<Self>;
+}
+
+/// Environment variables to configure the lambda hander.
+#[derive(Debug, Parser)]
+struct HandlerEnv {
+    /// How manny concurrent records should be processed at once.
+    /// See EventSourceMapping to set number of records in a batch
+    /// by setting BatchSize.
+    /// This defaults to 1 to set synchronous processing
+    #[clap(env, default_value_t = 1)]
+    record_concurrency: usize,
 }
 
 /// Executes a message handler against all the messages received in a batch
@@ -167,14 +180,18 @@ where
             )
             .json()
             .init();
-        let env =
-            Env::try_parse().context("An error occurred while parsing environment variables.")?;
+        let env = Env::try_parse().context(
+            "An error occurred while parsing environment variables for message context.",
+        )?;
         let ctx = Arc::new(Context::from_env(&env).await?);
         tracing::info!("Env: {:?}", env);
         tracing::info!("Context: {:?}", ctx);
         Ok::<_, anyhow::Error>(ctx)
     })()
     .await;
+
+    let handler_env: HandlerEnv = HandlerEnv::try_parse()
+        .context("An error occured while parsing environment variable for handler")?;
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<SqsEvent>| async {
         let (event, _context) = event.into_parts();
@@ -191,18 +208,24 @@ where
             };
 
             // Process each of the records. If any of them fail, return immediately.
-            for record in event.records {
-                let body = record
-                    .body
-                    .as_ref()
-                    .with_context(|| format!("No SqsMessage body: {:?}", record))?;
-                let msg = serde_json::from_str::<Msg>(body)
-                    .with_context(|| format!("Error parsing body into message: {}", body))?;
-                message_handler(msg, ctx.clone())
-                    .await
-                    .with_context(|| format!("Error running message handler: {}", body))?;
-            }
-            Ok(())
+            // Do this concurrently if required to saturate the CPU, control number
+            // of records by setting the event source mapping BatchSize (Default is 10).
+            stream::iter(event.records)
+                .map(|record| {
+                    let body = record
+                        .body
+                        .as_ref()
+                        .with_context(|| format!("No SqsMessage body: {:?}", record))?;
+                    serde_json::from_str::<Msg>(body)
+                        .with_context(|| format!("Error parsing body into message: {}", body))
+                        .map(|msg| (msg, body.to_owned())) //Body must be passed for error message
+                })
+                .try_for_each_concurrent(handler_env.record_concurrency, |(msg, body)| {
+                    message_handler(msg, ctx.clone()).map(move |r| {
+                        r.with_context(|| format!("Error running message handler {}", body))
+                    })
+                })
+                .await
         })()
         .await;
 
