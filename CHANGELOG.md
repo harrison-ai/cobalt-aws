@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Added support for processing messages concurrently by setting the `RECORD_CONCURRENCY` env var.
  - Updated `aws-sdk-*` dependencies to `0.9.0`.
 
 ## 0.3.0

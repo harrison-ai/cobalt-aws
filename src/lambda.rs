@@ -56,13 +56,13 @@ pub trait LambdaContext<Env>: Sized {
     async fn from_env(env: &Env) -> Result<Self>;
 }
 
-/// Environment variables to configure the lambda hander.
+/// Environment variables to configure the lambda handler.
 #[derive(Debug, Parser)]
 struct HandlerEnv {
-    /// How manny concurrent records should be processed at once.
-    /// See EventSourceMapping to set number of records in a batch
-    /// by setting BatchSize.
-    /// This defaults to 1 to set synchronous processing
+    /// How many concurrent records should be processed at once.
+    /// This defaults to 1 to set synchronous processing.
+    /// This value should not exceed the value of `BatchSize`
+    /// configured for the [event source mapping](https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html#invocation-eventsourcemapping-batching).
     #[clap(env, default_value_t = 1)]
     record_concurrency: usize,
 }
@@ -77,6 +77,7 @@ struct HandlerEnv {
 /// * Processes environment variables and makes them available to your handler
 /// * Initialises a shared context object, which is passed to your handler.
 /// * Deserialises a batch of messages and passes each one to your handler.
+/// * Processes messages concurrently, based on the env var `RECORD_CONCURRENCY` (default: 1)
 ///
 /// ## Writing a message handler
 ///
@@ -149,6 +150,13 @@ struct HandlerEnv {
 ///     Ok(())
 /// }
 /// ```
+/// # Concurrent processing
+///
+/// By default `run_message_handler` will process the messages in an event batch sequentially.
+/// You can configure `run_message_handler` to process messages concurrently by setting
+/// the `RECORD_CONCURRENCY` env var (default: 1). This value should not exceed the value of `BatchSize`
+/// configured for the [event source mapping](https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html#invocation-eventsourcemapping-batching)
+/// (default: 10).
 ///
 /// # Error handling
 ///
@@ -207,18 +215,17 @@ where
                 }
             };
 
-            // Process each of the records. If any of them fail, return immediately.
-            // Do this concurrently if required to saturate the CPU, control number
-            // of records by setting the event source mapping BatchSize (Default is 10).
+            // Process the records in the event batch concurrently, up to `RECORD_CONCURRENCY`.
+            // If any of them fail, return immediately.
             stream::iter(event.records)
                 .map(|record| {
                     let body = record
                         .body
                         .as_ref()
                         .with_context(|| format!("No SqsMessage body: {:?}", record))?;
-                    serde_json::from_str::<Msg>(body)
-                        .with_context(|| format!("Error parsing body into message: {}", body))
-                        .map(|msg| (msg, body.to_owned())) //Body must be passed for error message
+                    let msg = serde_json::from_str::<Msg>(body)
+                        .with_context(|| format!("Error parsing body into message: {}", body))?;
+                    Ok((msg, body.to_owned()))
                 })
                 .try_for_each_concurrent(handler_env.record_concurrency, |(msg, body)| {
                     message_handler(msg, ctx.clone()).map(move |r| {
