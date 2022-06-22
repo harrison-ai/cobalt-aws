@@ -27,12 +27,13 @@ enum PutObjectState<'a> {
 ///
 /// ```no_run
 /// use aws_config;
-/// use cobalt_aws::s3::{get_client, AsyncPutObject};
+/// use cobalt_aws::s3::{AsyncPutObject, Client};
+/// use cobalt_aws::config::load_from_env;
 /// use futures::AsyncWriteExt;
 ///
 /// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
+/// let shared_config = load_from_env().await.unwrap();
+/// let client = Client::new(&shared_config);
 ///
 /// let mut writer = AsyncPutObject::new(&client, "my-bucket", "my-key");
 /// writer.write_all(b"File contents").await.unwrap();
@@ -131,6 +132,7 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
 mod test_async_put_object {
     use super::*;
     use crate::localstack;
+    #[allow(deprecated)]
     use crate::s3::get_client;
     use aws_config;
     use futures::{AsyncReadExt, AsyncWriteExt};
@@ -141,6 +143,7 @@ mod test_async_put_object {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&shared_config).unwrap()
     }
 
