@@ -1,4 +1,4 @@
-//! A collection of wrappers around the [aws_sdk_sqs](https://docs.rs/aws-sdk-sqs/latest/aws_sdk_sqs/) crate.
+//! A collection of wrappers around the [aws_types::SdkConfig](https://docs.rs/aws-types/0.13.0/aws_types/sdk_config/struct.SdkConfig.html) object.
 
 use anyhow::Result;
 use aws_smithy_http::endpoint::Endpoint;
