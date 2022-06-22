@@ -1,6 +1,6 @@
 [package]
 name = "cobalt-aws"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["harrison.ai Data Engineering <dataengineering@harrison.ai>"]
 edition = "2021"
 description = "This library provides a collection of wrappers around the aws-sdk-rust and lambda_runtime packages."
