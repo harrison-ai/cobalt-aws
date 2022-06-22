@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Added `config::load_from_env()`, which creates an `SdkConfig` with LocalStack support.
  - Updated `aws-sdk-*` dependencies to `0.13.0`.
 
 ## 0.4.0
