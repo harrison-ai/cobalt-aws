@@ -56,6 +56,13 @@ pub use async_put_object::AsyncPutObject;
 ///
 /// An error will be returned if `LOCALSTACK_HOSTNAME` is set and a valid URI cannot be constructed.
 ///
+#[deprecated(
+    since = "0.5.0",
+    note = r#"
+To create a `Client` with LocalStack support use `aws_cobalt::config::load_from_env()` to create a `SdkConfig` with LocalStack support.
+Then `aws_sdk_s3::Client::new(&shared_config)` to create the `Client`.
+"#
+)]
 pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
     let mut builder = config::Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
