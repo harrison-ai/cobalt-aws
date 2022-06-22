@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.5.0
+
  - Added `config::load_from_env()`, which creates an `SdkConfig` with LocalStack support.
  - Deprecated `s3::get_client()`, `sqs::get_client()`, and `athena::get_client()`.
  - Updated `aws-sdk-*` dependencies to `0.13.0`.
