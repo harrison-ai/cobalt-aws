@@ -74,6 +74,7 @@ mod test {
     #[serial]
     async fn test_get_client() {
         let config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&config).unwrap();
     }
 }

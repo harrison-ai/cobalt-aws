@@ -159,6 +159,7 @@ mod test {
     #[serial]
     async fn test_get_client() {
         let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&shared_config).unwrap();
     }
 }
@@ -175,6 +176,7 @@ mod test_list_objects {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&shared_config).unwrap()
     }
 
@@ -311,6 +313,7 @@ mod test_get_object {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&shared_config).unwrap()
     }
 

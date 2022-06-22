@@ -153,6 +153,7 @@ mod test {
     #[serial]
     async fn test_get_client() {
         let config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&config).unwrap();
     }
 }
@@ -169,6 +170,7 @@ mod test_send_messages_concurrently {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&shared_config).unwrap()
     }
 

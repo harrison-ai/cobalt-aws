@@ -131,6 +131,7 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
 mod test_async_put_object {
     use super::*;
     use crate::localstack;
+    #[allow(deprecated)]
     use crate::s3::get_client;
     use aws_config;
     use futures::{AsyncReadExt, AsyncWriteExt};
@@ -141,6 +142,7 @@ mod test_async_put_object {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
         get_client(&shared_config).unwrap()
     }
 
