@@ -27,12 +27,13 @@ enum PutObjectState<'a> {
 ///
 /// ```no_run
 /// use aws_config;
-/// use cobalt_aws::s3::{get_client, AsyncPutObject};
+/// use cobalt_aws::s3::{AsyncPutObject, Client};
+/// use cobalt_aws::config::load_from_env;
 /// use futures::AsyncWriteExt;
 ///
 /// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
+/// let shared_config = load_from_env().await.unwrap();
+/// let client = Client::new(&shared_config);
 ///
 /// let mut writer = AsyncPutObject::new(&client, "my-bucket", "my-key");
 /// writer.write_all(b"File contents").await.unwrap();

@@ -79,11 +79,12 @@ const BATCH_SIZE: usize = 10;
 /// ```no_run
 /// use aws_config;
 /// use futures::stream;
-/// use cobalt_aws::sqs::{get_client, send_messages_concurrently};
+/// use cobalt_aws::sqs::{Client, send_messages_concurrently};
+/// use cobalt_aws::config::load_from_env;
 ///
 /// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
+/// let shared_config = load_from_env().await.unwrap();
+/// let client = Client::new(&shared_config);
 ///
 /// let messages = stream::iter(vec![Ok("Hello"), Ok("world")]);
 /// let queue_name = "MyQueue";

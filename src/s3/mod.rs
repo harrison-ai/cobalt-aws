@@ -77,12 +77,13 @@ pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
 ///
 /// ```no_run
 /// use aws_config;
-/// use cobalt_aws::s3::{get_client, list_objects};
+/// use cobalt_aws::s3::{Client, list_objects};
+/// use cobalt_aws::config::load_from_env;
 /// use futures::TryStreamExt;
 ///
 /// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
+/// let shared_config = load_from_env().await.unwrap();
+/// let client = Client::new(&shared_config);
 /// let mut objects = list_objects(&client, "my-bucket", Some("prefix".into()));
 /// while let Some(item) = objects.try_next().await.unwrap() {
 ///     println!("{:?}", item);
