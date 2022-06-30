@@ -1,0 +1,17 @@
+name: Test deployment of examples to localstack
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run hello world example
+        env:
+          LOCALSTACK_API_KEY: ${{ secrets.LOCALSTACK_API_KEY }}
+        run: make test-examples

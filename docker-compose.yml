@@ -16,6 +16,22 @@ services:
     depends_on:
       - localstack
 
+  awslocal:
+    build:
+      context: scripts
+      dockerfile: Dockerfile-awslocal
+    entrypoint: awslocal
+    volumes:
+      - '.:/app'
+    working_dir: '/app'
+    environment:
+      - LOCALSTACK_HOST=localstack
+      - AWS_DEFAULT_REGION=ap-southeast-2
+      - AWS_ACCESS_KEY_ID=placeholder
+      - AWS_SECRET_ACCESS_KEY=placeholder
+    depends_on:
+      - localstack
+
   localstack:
     image: localstack/localstack:0.14.4
     ports:
@@ -25,6 +41,7 @@ services:
       - DEBUG=0
       - DATA_DIR=${DATA_DIR-}
       - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR-}
+      - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY-}
       - HOST_TMP_FOLDER=${TMPDIR:-/tmp/}localstack
       - DOCKER_HOST=unix:///var/run/docker.sock
       - AWS_DEFAULT_REGION=ap-southeast-2

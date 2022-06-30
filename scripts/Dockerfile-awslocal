@@ -1,0 +1,11 @@
+# Docker image used for running `awslocal`
+
+FROM python:3.9-slim-bullseye
+
+RUN apt-get update && \
+    apt-get install --yes --quiet --no-install-recommends \
+        ca-certificates \
+        groff \
+        python-dev
+
+RUN pip install awscli-local[ver1]
