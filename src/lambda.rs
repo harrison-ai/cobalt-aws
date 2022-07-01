@@ -10,7 +10,9 @@ use clap::Parser;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::FutureExt;
 use lambda_runtime::{service_fn, LambdaEvent};
+use std::ffi::OsString;
 use std::future::Future;
+use std::iter::empty;
 use std::sync::Arc;
 use tracing_subscriber::filter::EnvFilter;
 
@@ -188,7 +190,13 @@ where
             )
             .json()
             .init();
-        let env = Env::try_parse().context(
+        // We only care about values provided as environment variables, so we pass in an empty
+        // iterator, rather than having clap parse the command line arguments. This avoids an
+        // unfortunate issue in LocalStack where a command line arg of "handler.handler" is provided
+        // as a command line argument to the process when using an Image based lambda. This triggers
+        // a problem, as clap (wrongly, IMHO) tries to assign this command line option to the first
+        //element of the Env struct, and then ignores any actual environment variable provided.
+        let env = Env::try_parse_from(empty::<OsString>()).context(
             "An error occurred while parsing environment variables for message context.",
         )?;
         let ctx = Arc::new(Context::from_env(&env).await?);
@@ -198,7 +206,7 @@ where
     })()
     .await;
 
-    let handler_env: HandlerEnv = HandlerEnv::try_parse()
+    let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
         .context("An error occured while parsing environment variable for handler")?;
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<SqsEvent>| async {
