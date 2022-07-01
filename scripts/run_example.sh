@@ -1,3 +1,5 @@
+set -e
+
 # Choose the example to run
 export EXAMPLE=hello_lambda
 
@@ -7,42 +9,41 @@ export ENV="GREETING=hello"
 # Specify the message to send to the lambda
 export MESSAGE="{\"target\": \"world\"}"
 
-export DEFAULT_REGION=ap-southeast-2
+DCRUN="docker-compose run --rm"
+AWSLOCAL="$DCRUN awslocal"
 
-# Restart the localstack daemon
-localstack stop
-localstack start -d --no-banner
-localstack wait
+# Restart the localstack daemon, to clear state.
+docker-compose down
+docker-compose up -d localstack
+
+# TODO: cleanly wait for localstack to come up
+sleep 5
 
 # Setup the queue
 export QUEUE_NAME=test-queue
-awslocal sqs create-queue --queue-name="$QUEUE_NAME" --attributes '{ "VisibilityTimeout": "240" }' > /dev/null
-QUEUE_URL=$(awslocal sqs list-queues | jq -r '.QueueUrls[0]')
-QUEUE_ARN=$(awslocal sqs get-queue-attributes --queue-url="$QUEUE_URL" --attribute-names QueueArn | jq -r '.Attributes.QueueArn')
+$AWSLOCAL sqs create-queue --queue-name="$QUEUE_NAME" --attributes '{ "VisibilityTimeout": "240" }'
+QUEUE_URL=$($AWSLOCAL sqs list-queues | jq -r '.QueueUrls[0]')
+QUEUE_ARN=$($AWSLOCAL sqs get-queue-attributes --queue-url="$QUEUE_URL" --attribute-names QueueArn | jq -r '.Attributes.QueueArn')
 export QUEUE_URL QUEUE_ARN
 
-# Build the app and bundle it into a zip file
-if [ -z "$CI" ]; then
-   cargo b --example $EXAMPLE --target x86_64-unknown-linux-musl
-   cp target/x86_64-unknown-linux-musl/debug/examples/$EXAMPLE bootstrap && zip lambda.zip bootstrap && rm bootstrap
-else
-   cargo b --example $EXAMPLE
-   cp target/debug/examples/$EXAMPLE bootstrap && zip lambda.zip bootstrap && rm bootstrap
-fi
+# Build the app and bundle it into a zip file.
+# Need to strip debuginfo to keep it under maximum lambda file size.
+$DCRUN -e RUSTFLAGS="-C strip=debuginfo" cargo build --example $EXAMPLE --target x86_64-unknown-linux-musl
+cp target/x86_64-unknown-linux-musl/debug/examples/$EXAMPLE bootstrap && zip lambda.zip bootstrap && rm bootstrap
 
 # Create a lambda function
-awslocal lambda create-function \
+$AWSLOCAL lambda create-function \
    --function-name=$EXAMPLE \
    --role=rn:aws:iam:local \
    --zip-file=fileb://lambda.zip \
    --environment "Variables={$ENV}" \
-   --runtime=provided > /dev/null
+   --runtime=provided
 
 # Create an event source mapping
-awslocal lambda create-event-source-mapping --function-name $EXAMPLE --event-source-arn "$QUEUE_ARN" > /dev/null
+$AWSLOCAL lambda create-event-source-mapping --function-name $EXAMPLE --event-source-arn "$QUEUE_ARN"
 
 # Send the message to the queue, triggering the lambda
-awslocal sqs send-message --queue-url "$QUEUE_URL" --message-body "$MESSAGE" > /dev/null
+$AWSLOCAL sqs send-message --queue-url "$QUEUE_URL" --message-body "$MESSAGE"
 
 echo
 echo "🚀 Message $MESSAGE sent to '$EXAMPLE'."
