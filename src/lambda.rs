@@ -190,6 +190,12 @@ where
             )
             .json()
             .init();
+        // We only care about values provided as environment variables, so we pass in an empty
+        // iterator, rather than having clap parse the command line arguments. This avoids an
+        // unfortunate issue in LocalStack where a command line arg of "handler.handler" is provided
+        // as a command line argument to the process when using an Image based lambda. This triggers
+        // a problem, as clap (wrongly, IMHO) tries to assign this command line option to the first
+        //element of the Env struct, and then ignores any actual environment variable provided.
         let env = Env::try_parse_from(empty::<OsString>()).context(
             "An error occurred while parsing environment variables for message context.",
         )?;
