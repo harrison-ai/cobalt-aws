@@ -36,7 +36,8 @@ $AWSLOCAL lambda create-function \
    --function-name=$EXAMPLE \
    --role=rn:aws:iam:local \
    --zip-file=fileb://lambda.zip \
-   --environment "Variables={$ENV}"
+   --environment "Variables={$ENV}" \
+   --handler "explicit handler"
 
 # Create an event source mapping
 $AWSLOCAL lambda create-event-source-mapping --function-name $EXAMPLE --event-source-arn "$QUEUE_ARN"
