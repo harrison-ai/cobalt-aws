@@ -10,7 +10,9 @@ use clap::Parser;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::FutureExt;
 use lambda_runtime::{service_fn, LambdaEvent};
+use std::ffi::OsString;
 use std::future::Future;
+use std::iter::empty;
 use std::sync::Arc;
 use tracing_subscriber::filter::EnvFilter;
 
@@ -188,7 +190,7 @@ where
             )
             .json()
             .init();
-        let env = Env::try_parse().context(
+        let env = Env::try_parse_from(empty::<OsString>()).context(
             "An error occurred while parsing environment variables for message context.",
         )?;
         let ctx = Arc::new(Context::from_env(&env).await?);
@@ -198,7 +200,7 @@ where
     })()
     .await;
 
-    let handler_env: HandlerEnv = HandlerEnv::try_parse()
+    let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
         .context("An error occured while parsing environment variable for handler")?;
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<SqsEvent>| async {
