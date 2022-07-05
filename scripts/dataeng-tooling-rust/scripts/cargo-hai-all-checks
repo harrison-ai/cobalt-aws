@@ -1,0 +1,13 @@
+#!/bin/sh
+#
+# A standard suite of code-quality checks for harrison.ai Rust projects.
+#
+
+# Everything should be formatted according to `cargo fmt`.
+cargo fmt -- --check
+
+# Everything should be clippy clean, with no warnings.
+cargo clippy --all-targets --all-features --no-deps -- -D warnings
+
+# The dependency tree should be compatible with our various policies.
+cargo deny check

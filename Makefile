@@ -5,7 +5,7 @@ DCRUN = docker-compose run --rm --user $(UID)
 .DEFAULT_GOAL := help
 
 ## test:         run all the tests
-test:
+test: dc-build
 	$(DCRUN) cargo test
 
 ## test-examples:	test example code using localstack

@@ -2,7 +2,9 @@ version: '3.7'
 services:
 
   cargo:
-    image: harrisonai/rust:1.60-0.2
+    #image: harrisonai/rust:1.60-0.2
+    build:
+      context: scripts/dataeng-tooling-rust
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
