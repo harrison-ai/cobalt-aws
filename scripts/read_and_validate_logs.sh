@@ -32,7 +32,7 @@ fi
 
 message=$(echo $message | jq -r ".fields.message")
 if [ "$message" = "$EXPECTED_MESSAGE" ]; then
-  echo "Test passed!"
+  echo "Test passed! Found expected message: $message"
   exit 0
 else
   echo "Test failed: EXPECTED=$EXPECTED_MESSAGE; ACTUAL=$message."

@@ -9,9 +9,10 @@ test:
 	$(DCRUN) cargo test
 
 ## test-examples:	test example code using localstack
+# Sleep for 20s in between to let CI complete execution
 test-examples:
 	./scripts/run_example.sh
-	sleep 10
+	sleep 20
 	./scripts/read_and_validate_logs.sh
 
 ## fmt:          format all code using standard conventions
