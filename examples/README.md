@@ -12,5 +12,5 @@ To run these examples local, you will need to have [LocalStack installed](EXAMPL
 To read the output logs of the lambda, run the script:
 
 ```shell
-./scripts/read_logs.sh
+./scripts/read_and_validate_logs.sh
 ```
