@@ -28,8 +28,8 @@ export QUEUE_URL QUEUE_ARN
 
 # Build the app and bundle it into a zip file.
 # Need to strip debuginfo to keep it under maximum lambda file size.
-$DCRUN -e RUSTFLAGS="-C strip=debuginfo" cargo build --example $EXAMPLE --target x86_64-unknown-linux-musl
-cp target/x86_64-unknown-linux-musl/debug/examples/$EXAMPLE bootstrap && zip lambda.zip bootstrap && rm bootstrap
+$DCRUN -e RUSTFLAGS="-C strip=debuginfo" cargo build --example $EXAMPLE --target aarch64-unknown-linux-musl
+cp target/aarch64-unknown-linux-musl/debug/examples/$EXAMPLE bootstrap && zip lambda.zip bootstrap && rm bootstrap
 
 # Create a lambda function
 $AWSLOCAL lambda create-function \
@@ -37,7 +37,8 @@ $AWSLOCAL lambda create-function \
    --role=rn:aws:iam:local \
    --zip-file=fileb://lambda.zip \
    --environment "Variables={$ENV}" \
-   --runtime=provided
+   --runtime=provided \
+   --architectures "arm64"
 
 # Create an event source mapping
 $AWSLOCAL lambda create-event-source-mapping --function-name $EXAMPLE --event-source-arn "$QUEUE_ARN"
@@ -45,6 +46,5 @@ $AWSLOCAL lambda create-event-source-mapping --function-name $EXAMPLE --event-so
 # Send the message to the queue, triggering the lambda
 $AWSLOCAL sqs send-message --queue-url "$QUEUE_URL" --message-body "$MESSAGE"
 
-echo
 echo "🚀 Message $MESSAGE sent to '$EXAMPLE'."
-echo "Run ./scripts/read_logs.sh to see the logs"
+echo "Run ./scripts/read_and_validate_logs.sh to see the logs"
