@@ -9,12 +9,10 @@ test: dc-build
 	$(DCRUN) cargo test
 
 ## test-examples:	test example code using localstack
-# FIXME: turn this into an actual test with assertions
-# Currently you need to visually inspect that the correct log output is generated.
 test-examples:
 	./scripts/run_example.sh
-	sleep 20
-	./scripts/read_logs.sh
+	sleep 10
+	./scripts/read_and_validate_logs.sh
 
 ## fmt:          format all code using standard conventions
 fmt:
