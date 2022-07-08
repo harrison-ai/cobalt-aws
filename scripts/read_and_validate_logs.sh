@@ -21,7 +21,10 @@ if [ -z "$STREAM_NAME" ] || [ "$STREAM_NAME" = "null" ]; then
     exit 1
 fi
 
-export AWS_LOGS=$($AWSLOCAL logs get-log-events --log-group-name /aws/lambda/$EXAMPLE --log-stream-name "$STREAM_NAME" --start-from-head | jq -r '.events[].message')
+# Debug
+$AWSLOCAL logs get-log-events --log-group-name /aws/lambda/$EXAMPLE --log-stream-name "$STREAM_NAME" --start-from-head | jq -r '.events[].message'
+
+AWS_LOGS="$($AWSLOCAL logs get-log-events --log-group-name /aws/lambda/$EXAMPLE --log-stream-name "$STREAM_NAME" --start-from-head | jq -r '.events[].message')"
 
 # Extracting the message and removing ASCII color tags
 log=$(echo $AWS_LOGS | sed -e 's/.*LATEST\(.*\)END.*/\1/' |  sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g')
