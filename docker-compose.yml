@@ -2,7 +2,7 @@ version: '3.7'
 services:
 
   cargo:
-    image: harrisonai/rust:1.60-0.2
+    image: harrisonai/experimental-packaging-rust:1.60-1.0
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
