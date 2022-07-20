@@ -59,7 +59,7 @@ pub use async_put_object::AsyncPutObject;
 #[deprecated(
     since = "0.5.0",
     note = r#"
-To create a `Client` with LocalStack support use `aws_cobalt::config::load_from_env()` to create a `SdkConfig` with LocalStack support.
+To create a `Client` with LocalStack support use `cobalt_aws::config::load_from_env()` to create a `SdkConfig` with LocalStack support.
 Then `aws_sdk_s3::Client::new(&shared_config)` to create the `Client`.
 "#
 )]
