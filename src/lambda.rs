@@ -7,8 +7,6 @@ use anyhow::{Context as _, Result};
 use async_trait::async_trait;
 use aws_lambda_events::event::sqs::SqsEvent;
 use clap::Parser;
-use futures::stream::{self, StreamExt, TryStreamExt};
-use futures::FutureExt;
 use lambda_runtime::{service_fn, LambdaEvent};
 use std::ffi::OsString;
 use std::future::Future;
