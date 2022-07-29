@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
  - Updated `aws-sdk-*` dependencies to `0.16.0`.
+ - Updated `lambda_runtime` dependency to `0.6.0`.
 
 ## 0.6.0
 
