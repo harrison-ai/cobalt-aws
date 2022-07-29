@@ -13,6 +13,7 @@ include = [
     "README.md",
     "CHANGELOG.md",
     "LICENCE",
+    "licenses/licenses.html",
 ]
 
 [dependencies]
