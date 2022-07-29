@@ -17,6 +17,6 @@ At [harrison.ai](https://harrison.ai) our mission is to create AI-as-a-medical-d
 
 Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0).
 
-Dependencies licensed under a [variety of licenses](https://htmlpreview.github.io/?https://github.com/harrison-ai/cobalt-aws/blob/master/licenses/licenses.html).
+Dependencies licensed under a [variety of open-source licenses](https://htmlpreview.github.io/?https://github.com/harrison-ai/cobalt-aws/blob/master/licenses/licenses.html).
 
 Copyright 2022 harrison.ai Pty. Ltd.
