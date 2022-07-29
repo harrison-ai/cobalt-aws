@@ -19,12 +19,12 @@ include = [
 [dependencies]
 anyhow = "1.0.58"
 async-trait = "0.1.56"
-aws-config = "0.15.0"
-aws-sdk-athena = "0.15.0"
-aws-sdk-s3 = "0.15.0"
-aws-sdk-sqs = "0.15.0"
-aws-smithy-http = "0.45.0"
-aws-types = "0.15.0"
+aws-config = "0.46.0"
+aws-sdk-athena = "0.16.0"
+aws-sdk-s3 = "0.16.0"
+aws-sdk-sqs = "0.16.0"
+aws-smithy-http = "0.46.0"
+aws-types = "0.46.0"
 aws_lambda_events = "0.6.3"
 clap = { version = "3.2.15", features = ["derive", "env"] }
 futures = "0.3.21"
