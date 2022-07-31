@@ -188,7 +188,6 @@ mod test_list_objects {
 
         let stream = list_objects(&client, "non-existant-bucket", None);
         let e = stream.try_collect::<Vec<_>>().await.unwrap_err();
-        println!("{:#?}", e);
         assert!(matches!(
             e.source()
                 .unwrap()
@@ -326,7 +325,6 @@ mod test_get_object {
         let e = get_object(&client, "non-existant-bucket", "my-object")
             .await
             .unwrap_err();
-        println!("{:#?}", e);
         let e = e
             .source()
             .unwrap()
@@ -337,7 +335,6 @@ mod test_get_object {
             e.kind,
             aws_sdk_s3::error::GetObjectErrorKind::Unhandled(_)
         ));
-        println!("{:#?}", e);
         assert_eq!(e.code(), Some("NoSuchBucket"));
     }
 

@@ -6,7 +6,7 @@ DCRUN = docker-compose run --rm --user $(UID)
 
 ## test:         run all the tests
 test:
-	$(DCRUN) cargo test -- --nocapture
+	$(DCRUN) cargo test
 
 ## test-examples:	test example code using localstack
 # Sleep for 20s in between to let CI complete execution
