@@ -30,8 +30,8 @@ validate:
 	$(DCRUN) cargo clippy --all-targets --all-features --no-deps -- -D warnings
 	$(DCRUN) cargo deny check
 
-## licenses:     Build license summary file
-licenses:
+## licenses-report: Build license summary file
+licenses-report:
 	$(DCRUN) cargo about generate --output-file ./licenses/licenses.html about.hbs
 
 ## pull:         docker-compose pull

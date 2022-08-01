@@ -5,7 +5,7 @@ To make a release of `cobalt-aws`, follow these steps:
 1. Prepare a release PR:
    -  Update the version in `Cargo.toml` to the target version
    -  Update `CHANGELOG.md` by changing the "Unreleased" heading to the target version and creating a blank Unreleased section
-   -  Update the `licenses/licenses.html` file by running `make licenses`.
+   -  Update the `licenses/licenses.html` file by running `make licenses-report`.
    -  Review the PR history since the previous release and ensure the changelog contents are up to date and correct.
 3. Push PR and merge into `main`
    - Trigger publish from Github actions (TODO), or
