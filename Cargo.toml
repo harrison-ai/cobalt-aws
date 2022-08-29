@@ -26,7 +26,7 @@ aws-sdk-sqs = "0.16.0"
 aws-smithy-http = "0.46.0"
 aws-types = "0.46.0"
 aws_lambda_events = "0.6.3"
-clap = { version = "3.2.17", features = ["derive", "env"] }
+clap = { version = "3.2.18", features = ["derive", "env"] }
 futures = "0.3.23"
 http = "0.2.8"
 lambda_runtime = "0.6.0"
