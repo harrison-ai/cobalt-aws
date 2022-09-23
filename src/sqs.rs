@@ -168,6 +168,8 @@ mod test_send_messages_concurrently {
     use serial_test::serial;
     use tokio;
 
+    const MAX_MESSAGES: i32 = 10;
+
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
@@ -189,6 +191,7 @@ mod test_send_messages_concurrently {
         let mut results: Vec<usize> = vec![];
         while let Ok(x) = client
             .receive_message()
+            .max_number_of_messages(MAX_MESSAGES)
             .wait_time_seconds(1)
             .queue_url(&queue_url)
             .send()
@@ -196,16 +199,17 @@ mod test_send_messages_concurrently {
         {
             match x.messages {
                 Some(ref messages) => {
-                    assert_eq!(messages.len(), 1);
-                    let message = &messages[0];
-                    results.push(message.body.as_ref().unwrap().parse().unwrap());
-                    client
-                        .delete_message()
-                        .queue_url(&queue_url)
-                        .receipt_handle(message.receipt_handle.as_ref().unwrap())
-                        .send()
-                        .await
-                        .unwrap();
+                    assert!(messages.len() <= MAX_MESSAGES.try_into().unwrap());
+                    for message in messages {
+                        results.push(message.body.as_ref().unwrap().parse().unwrap());
+                        client
+                            .delete_message()
+                            .queue_url(&queue_url)
+                            .receipt_handle(message.receipt_handle.as_ref().unwrap())
+                            .send()
+                            .await
+                            .unwrap();
+                    }
                 }
                 None => break,
             }
