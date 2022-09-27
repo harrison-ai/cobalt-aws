@@ -164,11 +164,12 @@ mod test_send_messages_concurrently {
     use super::*;
     use aws_config;
     use aws_sdk_sqs::error::GetQueueUrlError;
+    use aws_sdk_sqs::model::DeleteMessageBatchRequestEntry;
     use futures::stream;
     use serial_test::serial;
     use tokio;
 
-    const MAX_MESSAGES: i32 = 10;
+    const MAX_MESSAGES: usize = 10;
 
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
@@ -187,33 +188,81 @@ mod test_send_messages_concurrently {
             .queue_url
             .unwrap();
 
-        // FIXME: use batch operations
         let mut results: Vec<usize> = vec![];
         while let Ok(x) = client
             .receive_message()
-            .max_number_of_messages(MAX_MESSAGES)
+            .max_number_of_messages(i32::try_from(MAX_MESSAGES).ok().unwrap())
             .wait_time_seconds(1)
             .queue_url(&queue_url)
             .send()
             .await
         {
+            // let mut results_delete: Vec<DeleteMessageBatchRequestEntry> = vec![];
             match x.messages {
                 Some(ref messages) => {
-                    assert!(messages.len() <= MAX_MESSAGES.try_into().unwrap());
-                    for message in messages {
-                        results.push(message.body.as_ref().unwrap().parse().unwrap());
-                        client
-                            .delete_message()
-                            .queue_url(&queue_url)
-                            .receipt_handle(message.receipt_handle.as_ref().unwrap())
-                            .send()
-                            .await
-                            .unwrap();
-                    }
+                    assert!(messages.len() <= MAX_MESSAGES);
+
+                    let results_delete = messages
+                        .iter()
+                        .map(|msg| {
+                            results.push(msg.body.as_ref().unwrap().parse().unwrap());
+                            DeleteMessageBatchRequestEntry::builder()
+                                .receipt_handle(msg.body.as_ref().unwrap())
+                                .set_id(Some(format!("{:?}", msg.message_id)))
+                                .build()
+                        })
+                        .collect::<Vec<_>>();
+
+                    client
+                        .delete_message_batch()
+                        .queue_url(&queue_url)
+                        .set_entries(Some(results_delete))
+                        .send()
+                        .await
+                        .unwrap();
+
+                    // for message in messages {
+                    //     results.push(message.body.as_ref().unwrap().parse().unwrap());
+                    //     results_delete.push(
+                    //         DeleteMessageBatchRequestEntry::builder()
+                    //             .receipt_handle(message.body.as_ref().unwrap())
+                    //             .set_id(Some(format!("{:?}", message.message_id)))
+                    //             .build(),
+                    //     )
+                    // }
+
+                    // client
+                    //     .delete_message_batch()
+                    //     .queue_url(&queue_url)
+                    //     .set_entries(Some(results_delete))
+                    //     .send()
+                    //     .await
+                    //     .unwrap();
                 }
                 None => break,
             }
         }
+
+        // results
+        //     .iter()
+        //     .map(|e| {
+        //         DeleteMessageBatchRequestEntry::builder()
+        //             .receipt_handle(e.to_string())
+        //             .set_id(Some(format!("{:?}", e)))
+        //             .build()
+        //     })
+        //     .collect::<Vec<_>>()
+        //     .chunks_mut(MAX_MESSAGES)
+        //     .collect::<Vec<_>>()
+        //     .into_iter()
+        //     .map(|entries| {
+        //         client
+        //             .delete_message_batch()
+        //             .queue_url(&queue_url)
+        //             .set_entries(Some(entries.to_vec()))
+        //             .send()
+        //     });
+
         results.sort_unstable();
         results
     }
