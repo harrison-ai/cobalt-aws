@@ -164,9 +164,12 @@ mod test_send_messages_concurrently {
     use super::*;
     use aws_config;
     use aws_sdk_sqs::error::GetQueueUrlError;
+    use aws_sdk_sqs::model::DeleteMessageBatchRequestEntry;
     use futures::stream;
     use serial_test::serial;
     use tokio;
+
+    const MAX_MESSAGES: usize = 10;
 
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
@@ -185,24 +188,34 @@ mod test_send_messages_concurrently {
             .queue_url
             .unwrap();
 
-        // FIXME: use batch operations
         let mut results: Vec<usize> = vec![];
         while let Ok(x) = client
             .receive_message()
+            .max_number_of_messages(MAX_MESSAGES as i32)
             .wait_time_seconds(1)
             .queue_url(&queue_url)
             .send()
             .await
         {
             match x.messages {
-                Some(ref messages) => {
-                    assert_eq!(messages.len(), 1);
-                    let message = &messages[0];
-                    results.push(message.body.as_ref().unwrap().parse().unwrap());
+                Some(messages) => {
+                    assert!(messages.len() <= MAX_MESSAGES);
+
+                    let results_delete = messages
+                        .into_iter()
+                        .map(|msg| {
+                            results.push(msg.body.unwrap().parse().unwrap());
+                            DeleteMessageBatchRequestEntry::builder()
+                                .set_receipt_handle(msg.receipt_handle)
+                                .set_id(msg.message_id)
+                                .build()
+                        })
+                        .collect::<Vec<_>>();
+
                     client
-                        .delete_message()
+                        .delete_message_batch()
                         .queue_url(&queue_url)
-                        .receipt_handle(message.receipt_handle.as_ref().unwrap())
+                        .set_entries(Some(results_delete))
                         .send()
                         .await
                         .unwrap();
