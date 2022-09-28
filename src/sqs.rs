@@ -191,23 +191,23 @@ mod test_send_messages_concurrently {
         let mut results: Vec<usize> = vec![];
         while let Ok(x) = client
             .receive_message()
-            .max_number_of_messages(i32::try_from(MAX_MESSAGES).ok().unwrap())
+            .max_number_of_messages(MAX_MESSAGES as i32)
             .wait_time_seconds(1)
             .queue_url(&queue_url)
             .send()
             .await
         {
             match x.messages {
-                Some(ref messages) => {
+                Some(messages) => {
                     assert!(messages.len() <= MAX_MESSAGES);
 
                     let results_delete = messages
-                        .iter()
+                        .into_iter()
                         .map(|msg| {
-                            results.push(msg.body.as_ref().unwrap().parse().unwrap());
+                            results.push(msg.body.unwrap().parse().unwrap());
                             DeleteMessageBatchRequestEntry::builder()
-                                .receipt_handle(msg.receipt_handle.as_ref().unwrap())
-                                .set_id(Some(msg.message_id.as_ref().unwrap().parse().unwrap()))
+                                .set_receipt_handle(msg.receipt_handle)
+                                .set_id(msg.message_id)
                                 .build()
                         })
                         .collect::<Vec<_>>();
