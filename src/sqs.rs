@@ -197,7 +197,6 @@ mod test_send_messages_concurrently {
             .send()
             .await
         {
-            // let mut results_delete: Vec<DeleteMessageBatchRequestEntry> = vec![];
             match x.messages {
                 Some(ref messages) => {
                     assert!(messages.len() <= MAX_MESSAGES);
@@ -207,8 +206,8 @@ mod test_send_messages_concurrently {
                         .map(|msg| {
                             results.push(msg.body.as_ref().unwrap().parse().unwrap());
                             DeleteMessageBatchRequestEntry::builder()
-                                .receipt_handle(msg.body.as_ref().unwrap())
-                                .set_id(Some(format!("{:?}", msg.message_id)))
+                                .receipt_handle(msg.receipt_handle.as_ref().unwrap())
+                                .set_id(Some(msg.message_id.as_ref().unwrap().parse().unwrap()))
                                 .build()
                         })
                         .collect::<Vec<_>>();
@@ -220,49 +219,10 @@ mod test_send_messages_concurrently {
                         .send()
                         .await
                         .unwrap();
-
-                    // for message in messages {
-                    //     results.push(message.body.as_ref().unwrap().parse().unwrap());
-                    //     results_delete.push(
-                    //         DeleteMessageBatchRequestEntry::builder()
-                    //             .receipt_handle(message.body.as_ref().unwrap())
-                    //             .set_id(Some(format!("{:?}", message.message_id)))
-                    //             .build(),
-                    //     )
-                    // }
-
-                    // client
-                    //     .delete_message_batch()
-                    //     .queue_url(&queue_url)
-                    //     .set_entries(Some(results_delete))
-                    //     .send()
-                    //     .await
-                    //     .unwrap();
                 }
                 None => break,
             }
         }
-
-        // results
-        //     .iter()
-        //     .map(|e| {
-        //         DeleteMessageBatchRequestEntry::builder()
-        //             .receipt_handle(e.to_string())
-        //             .set_id(Some(format!("{:?}", e)))
-        //             .build()
-        //     })
-        //     .collect::<Vec<_>>()
-        //     .chunks_mut(MAX_MESSAGES)
-        //     .collect::<Vec<_>>()
-        //     .into_iter()
-        //     .map(|entries| {
-        //         client
-        //             .delete_message_batch()
-        //             .queue_url(&queue_url)
-        //             .set_entries(Some(entries.to_vec()))
-        //             .send()
-        //     });
-
         results.sort_unstable();
         results
     }
