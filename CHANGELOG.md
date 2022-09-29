@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Updated `aws-sdk-{athena,s3,sqs}` dependencies to `0.19.0`.
+ - Updated `aws-{config, smithy-http, types}` dependencies to `0.49.0`.
+ - Updated `aws_lambda_events` dependency to `0.7.0`.
+ - Updated `lambda_runtime` dependency to `0.6.1`.
+
 ## 0.7.0
 
  - Updated `aws-sdk-*` dependencies to `0.16.0`.
