@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - Updated `aws-{config, smithy-http, types}` dependencies to `0.49.0`.
  - Updated `aws_lambda_events` dependency to `0.7.0`.
  - Updated `lambda_runtime` dependency to `0.6.1`.
+ - Updated `clap` dependency to `4.0.4`.
 
 ## 0.7.0
 
