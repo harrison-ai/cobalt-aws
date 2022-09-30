@@ -65,7 +65,7 @@ struct HandlerEnv {
     /// This defaults to 1 to set synchronous processing.
     /// This value should not exceed the value of `BatchSize`
     /// configured for the [event source mapping](https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html#invocation-eventsourcemapping-batching).
-    #[clap(env, default_value_t = 1)]
+    #[arg(env, default_value_t = 1)]
     record_concurrency: usize,
 }
 
@@ -117,10 +117,10 @@ struct HandlerEnv {
 ///
 /// /// Configuration we receive from environment variables.
 /// ///
-/// /// Note: all fields should be tagged with the `#[clap(env)]` attribute.
+/// /// Note: all fields should be tagged with the `#[arg(env)]` attribute.
 /// #[derive(Debug, Parser)]
 /// pub struct Env {
-///     #[clap(env)]
+///     #[arg(env)]
 ///     pub greeting: String,
 /// }
 ///

@@ -20,10 +20,10 @@ pub struct Message {
 
 /// Configuration we receive from environment variables.
 ///
-/// Note: all fields should be tagged with the `#[clap(env)]` attribute.
+/// Note: all fields should be tagged with the `#[arg(env)]` attribute.
 #[derive(Debug, Parser)]
 pub struct Env {
-    #[clap(env)]
+    #[arg(env)]
     pub greeting: String,
 }
 
