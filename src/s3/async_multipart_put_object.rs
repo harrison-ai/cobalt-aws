@@ -2,9 +2,7 @@
 
 use anyhow::Context as _;
 use aws_sdk_s3::error::{CompleteMultipartUploadError, UploadPartError};
-use aws_sdk_s3::model::CompletedMultipartUpload;
-use aws_sdk_s3::model::CompletedPart;
-use aws_sdk_s3::model::ObjectCannedAcl;
+use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl};
 use aws_sdk_s3::output::{CompleteMultipartUploadOutput, UploadPartOutput};
 use aws_sdk_s3::types::{ByteStream, SdkError};
 use bytesize::{GIB, MIB};
@@ -64,6 +62,28 @@ enum AsyncMultipartUploadState<'a> {
 /// ## Note
 /// On failure the multipart upload is not aborted. It is up to the
 /// caller to call the S3 `abortMultipartUpload` API when required.
+///
+/// ```no_run
+/// use cobalt_aws::s3::{AsyncMultipartUpload, Client, S3Object};
+/// use cobalt_aws::config::load_from_env;
+/// use futures::AsyncWriteExt;
+///
+/// # tokio_test::block_on(async {
+/// let shared_config = load_from_env().await.unwrap();
+/// let client = Client::new(&shared_config);
+/// let dst = S3Object::new("my-bucket", "my-key");
+/// let part_size = 5 * 1_048_576;
+/// let mut writer = AsyncMultipartUpload::new(&client, &dst, part_size, None).await.unwrap();
+/// let buffer_len = 6 * 1_048_576;
+/// // Each part is uploaded as it's available
+/// writer.write_all(&vec![0; buffer_len]).await.unwrap();
+/// 
+/// // The pending parts are uploaded and the multipart upload is completed
+/// // on close.
+/// writer.close().await.unwrap();
+/// # })
+/// ```
+
 #[derive(Debug)]
 pub struct AsyncMultipartUpload<'a> {
     client: &'a Client,
@@ -601,4 +621,5 @@ mod tests {
         assert!(upload.write_all(&vec![0; buffer_len]).await.is_err());
         Ok(())
     }
+
 }
