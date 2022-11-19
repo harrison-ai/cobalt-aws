@@ -417,17 +417,16 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytesize::MIB;
-    use ::function_name::named;
-    use anyhow::Result;
-    use crate::s3::{AsyncMultipartUpload, S3Object};
-    use futures::prelude::*;
-    use crate::s3::test::*;
     use crate::localstack;
     #[allow(deprecated)]
     use crate::s3::get_client;
+    use crate::s3::test::*;
+    use crate::s3::{AsyncMultipartUpload, S3Object};
+    use ::function_name::named;
+    use anyhow::Result;
     use aws_config;
-
+    use bytesize::MIB;
+    use futures::prelude::*;
 
     #[tokio::test]
     async fn test_part_size_too_small() {
@@ -463,10 +462,9 @@ mod tests {
         )
     }
 
-
     // *** Integration tests *** //
     //Integration tests should be in src/tests but there is tight coupling with
-    //localstack which makes it hard to migrate at this point.
+    //localstack which makes it hard to migrate away from this structure.
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
@@ -474,30 +472,133 @@ mod tests {
         get_client(&shared_config).unwrap()
     }
 
-
     #[tokio::test]
     #[named]
-    async fn test_put_single_part() -> Result<()>{
-       
+    async fn test_put_single_part() -> Result<()> {
         let client = localstack_test_client().await;
         let test_bucket = "test-multipart-bucket";
         let mut rng = seeded_rng(function_name!());
         let dst_key = gen_random_file_name(&mut rng);
-    
+
         create_bucket(&client, test_bucket).await.unwrap();
         let buffer_len = MIB as usize;
-    
+
         let dst = S3Object::new(test_bucket, &dst_key);
-        let mut upload =
-            AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
-                .await
-                .unwrap();
-        upload.write_all(&vec![0; buffer_len]).await.unwrap();
-        upload.close().await.unwrap();
-        let body = fetch_bytes(&client, &dst)
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
             .await
             .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.close().await.unwrap();
+        let body = fetch_bytes(&client, &dst).await.unwrap();
         assert_eq!(body.len(), buffer_len);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_put_10mb() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = 10 * MIB as usize;
+
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.close().await.unwrap();
+        let body = fetch_bytes(&client, &dst).await.unwrap();
+        assert_eq!(body.len(), buffer_len);
+        Ok(())
+    }
+    #[tokio::test]
+    #[named]
+    async fn test_put_14mb() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = 14 * MIB as usize;
+
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.close().await.unwrap();
+        let body = fetch_bytes(&client, &dst).await.unwrap();
+        assert_eq!(body.len(), buffer_len);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_put_flush() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = MIB as usize;
+
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, Some(1))
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.flush().await.unwrap();
+        upload.close().await.unwrap();
+        let body = fetch_bytes(&client, &dst).await.unwrap();
+        assert_eq!(body.len(), buffer_len);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_put_double_close() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = 100_usize;
+
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, Some(1))
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.close().await.unwrap();
+        assert!(upload.close().await.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_put_write_after_close() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = 100_usize;
+
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, Some(1))
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.close().await.unwrap();
+        assert!(upload.write_all(&vec![0; buffer_len]).await.is_err());
         Ok(())
     }
 }

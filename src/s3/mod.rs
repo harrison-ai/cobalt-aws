@@ -156,22 +156,21 @@ pub async fn get_object(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::s3::S3Object;
+    use anyhow::Result;
     use aws_config;
     use aws_sdk_s3::error::CreateBucketError;
-    use serial_test::serial;
-    use tokio;
-    use std::collections::hash_map::DefaultHasher;
-    use anyhow::Result;
+    use aws_sdk_s3::error::CreateBucketErrorKind;
+    use aws_sdk_s3::model;
     use aws_sdk_s3::Client;
-    use rand_chacha::ChaCha8Rng;
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
-    use std::hash::{Hash, Hasher};
     use rand::SeedableRng;
-    use crate::s3::S3Object;
-    use aws_sdk_s3::model;
-    use aws_sdk_s3::error::CreateBucketErrorKind;
-
+    use rand_chacha::ChaCha8Rng;
+    use serial_test::serial;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    use tokio;
 
     #[tokio::test]
     #[serial]
@@ -183,30 +182,38 @@ mod test {
 
     pub async fn create_bucket(client: &Client, bucket: &str) -> Result<()> {
         let constraint = model::CreateBucketConfiguration::builder()
-            .location_constraint(model::BucketLocationConstraint::ApSoutheast2).build();
-        match client.create_bucket().bucket(bucket)
+            .location_constraint(model::BucketLocationConstraint::ApSoutheast2)
+            .build();
+        match client
+            .create_bucket()
+            .bucket(bucket)
             .create_bucket_configuration(constraint)
-            .send().await {
-                Ok(_) => Ok::<(), anyhow::Error>(()),
-                Err(SdkError::ServiceError { err: CreateBucketError{kind: CreateBucketErrorKind::BucketAlreadyOwnedByYou(_), ..}, .. }) =>{
-                    Ok::<(),anyhow::Error>(())
-                },
-                Err(e) => Err(anyhow::Error::from(e))
-            }
+            .send()
+            .await
+        {
+            Ok(_) => Ok::<(), anyhow::Error>(()),
+            Err(SdkError::ServiceError {
+                err:
+                    CreateBucketError {
+                        kind: CreateBucketErrorKind::BucketAlreadyOwnedByYou(_),
+                        ..
+                    },
+                ..
+            }) => Ok::<(), anyhow::Error>(()),
+            Err(e) => Err(anyhow::Error::from(e)),
+        }
     }
-    
+
     pub fn seeded_rng<H: Hash + ?Sized>(seed: &H) -> impl Rng {
         let mut hasher = DefaultHasher::new();
         seed.hash(&mut hasher);
         ChaCha8Rng::seed_from_u64(hasher.finish())
     }
-    
-    
+
     pub fn gen_random_file_name<R: Rng>(rng: &mut R) -> String {
         Alphanumeric.sample_string(rng, 16)
     }
-    
-    
+
     pub async fn fetch_bytes(client: &Client, obj: &S3Object) -> Result<Vec<u8>> {
         Ok(client
             .get_object()
