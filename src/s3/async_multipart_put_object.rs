@@ -94,7 +94,7 @@ impl<'a> AsyncMultipartUpload<'a> {
     #[instrument(skip(client))]
     pub async fn new(
         client: &'a Client,
-        dst: S3Object,
+        dst: &S3Object,
         part_size: usize,
         max_uploading_parts: Option<usize>,
     ) -> anyhow::Result<AsyncMultipartUpload<'a>> {
@@ -122,7 +122,7 @@ impl<'a> AsyncMultipartUpload<'a> {
 
         Ok(AsyncMultipartUpload {
             client,
-            dst,
+            dst: dst.clone(),
             upload_id: upload_id.into(),
             part_size,
             max_uploading_parts: max_uploading_parts.unwrap_or(DEFAULT_MAX_UPLOADING_PARTS),
@@ -300,7 +300,7 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                     Poll::Ready(Ok(()))
                 } else {
                     event!(Level::DEBUG, "Waiting for uploads to complete");
-                    //Assume that polled futures will trigger a wake
+                    //Polled futures will trigger a wake
                     Poll::Pending
                 }
             }
@@ -417,13 +417,24 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytesize::MIB;
+    use ::function_name::named;
+    use anyhow::Result;
+    use crate::s3::{AsyncMultipartUpload, S3Object};
+    use futures::prelude::*;
+    use crate::s3::test::*;
+    use crate::localstack;
+    #[allow(deprecated)]
+    use crate::s3::get_client;
+    use aws_config;
+
 
     #[tokio::test]
     async fn test_part_size_too_small() {
         let shared_config = aws_config::load_from_env().await;
         let client = aws_sdk_s3::Client::new(&shared_config);
         let dst = S3Object::new("bucket", "key");
-        assert!(AsyncMultipartUpload::new(&client, dst, 0_usize, None)
+        assert!(AsyncMultipartUpload::new(&client, &dst, 0_usize, None)
             .await
             .is_err())
     }
@@ -434,7 +445,7 @@ mod tests {
         let client = aws_sdk_s3::Client::new(&shared_config);
         let dst = S3Object::new("bucket", "key");
         assert!(
-            AsyncMultipartUpload::new(&client, dst, 5 * GIB as usize + 1, None)
+            AsyncMultipartUpload::new(&client, &dst, 5 * GIB as usize + 1, None)
                 .await
                 .is_err()
         )
@@ -446,9 +457,47 @@ mod tests {
         let client = aws_sdk_s3::Client::new(&shared_config);
         let dst = S3Object::new("bucket", "key");
         assert!(
-            AsyncMultipartUpload::new(&client, dst, 5 * MIB as usize, Some(0))
+            AsyncMultipartUpload::new(&client, &dst, 5 * MIB as usize, Some(0))
                 .await
                 .is_err()
         )
+    }
+
+
+    // *** Integration tests *** //
+    //Integration tests should be in src/tests but there is tight coupling with
+    //localstack which makes it hard to migrate at this point.
+    async fn localstack_test_client() -> Client {
+        localstack::test_utils::wait_for_localstack().await;
+        let shared_config = aws_config::load_from_env().await;
+        #[allow(deprecated)]
+        get_client(&shared_config).unwrap()
+    }
+
+
+    #[tokio::test]
+    #[named]
+    async fn test_put_single_part() -> Result<()>{
+       
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+    
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = MIB as usize;
+    
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload =
+            AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
+                .await
+                .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.close().await.unwrap();
+        let body = fetch_bytes(&client, &dst)
+            .await
+            .unwrap();
+        assert_eq!(body.len(), buffer_len);
+        Ok(())
     }
 }
