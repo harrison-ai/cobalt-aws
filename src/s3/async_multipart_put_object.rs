@@ -323,8 +323,12 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                     //Polled futures will trigger a wake
                     Poll::Pending
                 }
-            }
-            _ => Poll::Ready(Err(Error::new(
+            },
+            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::new(
+                ErrorKind::Other,
+                "Attempted to .write() when state is None",
+            ))),
+             _ => Poll::Ready(Err(Error::new(
                 ErrorKind::Other,
                 "Attempted to .flush() writer after .close().",
             ))),
