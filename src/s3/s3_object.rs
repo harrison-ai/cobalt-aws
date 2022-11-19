@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anyhow::{bail, Context, Error};
+use anyhow::{bail, Context, Error, Result};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
