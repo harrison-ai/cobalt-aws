@@ -77,7 +77,7 @@ enum AsyncMultipartUploadState<'a> {
 /// let buffer_len = 6 * 1_048_576;
 /// // Each part is uploaded as it's available
 /// writer.write_all(&vec![0; buffer_len]).await.unwrap();
-/// 
+///
 /// // The pending parts are uploaded and the multipart upload is completed
 /// // on close.
 /// writer.close().await.unwrap();
@@ -323,12 +323,12 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                     //Polled futures will trigger a wake
                     Poll::Pending
                 }
-            },
+            }
             AsyncMultipartUploadState::None => Poll::Ready(Err(Error::new(
                 ErrorKind::Other,
                 "Attempted to .write() when state is None",
             ))),
-             _ => Poll::Ready(Err(Error::new(
+            _ => Poll::Ready(Err(Error::new(
                 ErrorKind::Other,
                 "Attempted to .flush() writer after .close().",
             ))),
@@ -625,5 +625,4 @@ mod tests {
         assert!(upload.write_all(&vec![0; buffer_len]).await.is_err());
         Ok(())
     }
-
 }
