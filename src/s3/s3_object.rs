@@ -55,7 +55,7 @@ impl TryFrom<&str> for S3Object {
     }
 }
 
-/// Covert from [String] into a [S3Object].
+/// Convert from [String] into a [S3Object].
 /// The [String] must be a valid `S3` [Url].
 impl TryFrom<String> for S3Object {
     type Error = Error;
