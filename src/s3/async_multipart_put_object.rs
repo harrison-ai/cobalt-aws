@@ -107,8 +107,7 @@ impl<'a> AsyncMultipartUpload<'a> {
     /// Create a new [AsyncMultipartUpload].
     ///
     /// * `client`              - S3 client to use.
-    /// * `bucket`              - Bucket to write the object into.
-    /// * `key`                 - Key to write the object into.
+    /// * `dst`              - The [S3Object] to write the object into.
     /// * `part_size`           - How large, in bytes, each part should be.
     /// * `max_uploading_parts` - How many parts to upload concurrently.
     #[instrument(skip(client))]
