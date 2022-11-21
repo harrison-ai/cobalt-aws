@@ -108,9 +108,9 @@ impl<'a> AsyncMultipartUpload<'a> {
     ///
     /// * `client`              - S3 client to use.
     /// * `dst`                 - The [S3Object] to write the object into.
-    /// * `part_size`           - How large, in bytes, each part should be. Must be 
+    /// * `part_size`           - How large, in bytes, each part should be. Must be
     /// larger than 5MIB and smaller that 5GIB.
-    /// * `max_uploading_parts` - How many parts to upload concurrently, 
+    /// * `max_uploading_parts` - How many parts to upload concurrently,
     /// Must be larger than 0 (defaults to 100).
     #[instrument(skip(client))]
     pub async fn new(
