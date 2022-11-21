@@ -107,9 +107,11 @@ impl<'a> AsyncMultipartUpload<'a> {
     /// Create a new [AsyncMultipartUpload].
     ///
     /// * `client`              - S3 client to use.
-    /// * `dst`              - The [S3Object] to write the object into.
-    /// * `part_size`           - How large, in bytes, each part should be.
-    /// * `max_uploading_parts` - How many parts to upload concurrently (defaults to 100).
+    /// * `dst`                 - The [S3Object] to write the object into.
+    /// * `part_size`           - How large, in bytes, each part should be. Must be 
+    /// larger than 5MIB and smaller that 5GIB.
+    /// * `max_uploading_parts` - How many parts to upload concurrently, 
+    /// Must be larger than 0 (defaults to 100).
     #[instrument(skip(client))]
     pub async fn new(
         client: &'a Client,
@@ -125,7 +127,8 @@ impl<'a> AsyncMultipartUpload<'a> {
             anyhow::bail!("part_size was {part_size}, can not be more than {MAX_PART_SIZE}")
         }
 
-        if max_uploading_parts.unwrap_or(DEFAULT_MAX_UPLOADING_PARTS) == 0 {
+        //Check that used did not send in invalid parameter
+        if let Some(0) = max_uploading_parts {
             anyhow::bail!("Max uploading parts must not be 0")
         }
 
