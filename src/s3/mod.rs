@@ -221,7 +221,7 @@ mod test {
             .key(&obj.key)
             .send()
             .await
-            .expect("Expceted dst key to exist")
+            .expect("Expected dst key to exist")
             .body
             .collect()
             .await
