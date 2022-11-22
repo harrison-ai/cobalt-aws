@@ -16,8 +16,12 @@ use crate::localstack;
 ///
 pub use aws_sdk_s3::Client;
 
+mod async_multipart_put_object;
 mod async_put_object;
+mod s3_object;
+pub use async_multipart_put_object::AsyncMultipartUpload;
 pub use async_put_object::AsyncPutObject;
+pub use s3_object::S3Object;
 
 /// Create an S3 client with LocalStack support.
 ///
@@ -152,8 +156,20 @@ pub async fn get_object(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::s3::S3Object;
+    use anyhow::Result;
     use aws_config;
+    use aws_sdk_s3::error::CreateBucketError;
+    use aws_sdk_s3::error::CreateBucketErrorKind;
+    use aws_sdk_s3::model;
+    use aws_sdk_s3::Client;
+    use rand::distributions::{Alphanumeric, DistString};
+    use rand::Rng;
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha8Rng;
     use serial_test::serial;
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
     use tokio;
 
     #[tokio::test]
@@ -162,6 +178,56 @@ mod test {
         let shared_config = aws_config::load_from_env().await;
         #[allow(deprecated)]
         get_client(&shared_config).unwrap();
+    }
+
+    pub async fn create_bucket(client: &Client, bucket: &str) -> Result<()> {
+        let constraint = model::CreateBucketConfiguration::builder()
+            .location_constraint(model::BucketLocationConstraint::ApSoutheast2)
+            .build();
+        match client
+            .create_bucket()
+            .bucket(bucket)
+            .create_bucket_configuration(constraint)
+            .send()
+            .await
+        {
+            Ok(_) => Ok::<(), anyhow::Error>(()),
+            Err(SdkError::ServiceError {
+                err:
+                    CreateBucketError {
+                        kind: CreateBucketErrorKind::BucketAlreadyOwnedByYou(_),
+                        ..
+                    },
+                ..
+            }) => Ok::<(), anyhow::Error>(()),
+            Err(e) => Err(anyhow::Error::from(e)),
+        }
+    }
+
+    pub fn seeded_rng<H: Hash + ?Sized>(seed: &H) -> impl Rng {
+        let mut hasher = DefaultHasher::new();
+        seed.hash(&mut hasher);
+        ChaCha8Rng::seed_from_u64(hasher.finish())
+    }
+
+    pub fn gen_random_file_name<R: Rng>(rng: &mut R) -> String {
+        Alphanumeric.sample_string(rng, 16)
+    }
+
+    pub async fn fetch_bytes(client: &Client, obj: &S3Object) -> Result<Vec<u8>> {
+        Ok(client
+            .get_object()
+            .bucket(&obj.bucket)
+            .key(&obj.key)
+            .send()
+            .await
+            .expect("Expected dst key to exist")
+            .body
+            .collect()
+            .await
+            .expect("Expected a body")
+            .into_bytes()
+            .into())
     }
 }
 
