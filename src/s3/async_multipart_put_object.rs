@@ -127,7 +127,7 @@ impl<'a> AsyncMultipartUpload<'a> {
             anyhow::bail!("part_size was {part_size}, can not be more than {MAX_PART_SIZE}")
         }
 
-        //Check that used did not send in invalid parameter
+        //Check that user did not send in invalid parameter
         if let Some(0) = max_uploading_parts {
             anyhow::bail!("Max uploading parts must not be 0")
         }
