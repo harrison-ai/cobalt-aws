@@ -27,7 +27,7 @@ aws-smithy-http = "0.49.0"
 aws-types = "0.49.0"
 aws_lambda_events = "0.7.0"
 bytesize = "1.1.0"
-clap = { version = "4.0.22", features = ["derive", "env"] }
+clap = { version = "4.0.26", features = ["derive", "env"] }
 derivative = "2.2.0"
 futures = "0.3.25"
 http = "0.2.8"
