@@ -6,8 +6,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.9.0
+
  - Added AsyncMultipartUpload.
  - Add S3Object.
+ - Updated `aws_lambda_events` to 0.7.2 
+ - Updated `aws_lambda_runtime` to 0.7.1
+ - Updated `aws-config` to 0.51.0
+ - Updated `aws-sdk-athena` to 0.21.0
+ - Updated `aws-sdk-s3` to 0.21.0
+ - Updated `aws-sdk-sqs` to 0.21.0
+ - Updated `aws-smithy-http` to 0.51.0
+ - Updated `aws-types` to 0.51.0
 
 ## 0.8.0
 
