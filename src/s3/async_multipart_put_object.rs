@@ -644,7 +644,7 @@ mod tests {
     #[named]
     async fn test_put_16mb_single_upload() {
         let client = localstack_test_client().await;
-        let test_bucket = "test-bucket";
+        let test_bucket = "test-multipart-bucket";
         let mut rng = seeded_rng(function_name!());
         let dst_key = gen_random_file_name(&mut rng);
 
