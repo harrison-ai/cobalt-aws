@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.9.1
+
 - Set AsyncMultipartUpload state back when there is no capacity.
 
 ## 0.9.0
