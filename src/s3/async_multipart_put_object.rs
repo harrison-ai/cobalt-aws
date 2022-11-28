@@ -265,6 +265,12 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                 // No capacity to upload
                 if bytes_to_write == 0 {
                     uploads.is_empty().then(|| cx.waker().wake_by_ref());
+                    self.state = AsyncMultipartUploadState::Writing {
+                        uploads,
+                        buffer,
+                        part_number,
+                        completed_parts,
+                    };
                     return Poll::Pending;
                 }
                 buffer.extend(&buf[..bytes_to_write]);
@@ -356,6 +362,12 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                 AsyncMultipartUpload::check_uploads(&mut uploads, &mut completed_parts, cx)?;
                 if self.max_uploading_parts - uploads.len() == 0 {
                     event!(Level::DEBUG, "Waiting for available upload capacity");
+                    self.state = AsyncMultipartUploadState::Writing {
+                        buffer,
+                        uploads,
+                        completed_parts,
+                        part_number,
+                    };
                     return Poll::Pending;
                 }
                 if !buffer.is_empty() {
@@ -626,5 +638,30 @@ mod tests {
         upload.close().await.unwrap();
         assert!(upload.write_all(&vec![0; buffer_len]).await.is_err());
         Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_put_16mb_single_upload() {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5 * MIB as usize, Some(1))
+            .await
+            .unwrap();
+
+        let data_len = 16 * MIB as usize;
+
+        upload.write_all(&vec![0; data_len]).await.unwrap();
+        upload.close().await.unwrap();
+        let bytes = fetch_bytes(&client, &S3Object::new(test_bucket, &dst_key))
+            .await
+            .unwrap();
+        assert_eq!(data_len, bytes.len())
     }
 }
