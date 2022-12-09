@@ -2,14 +2,14 @@
 
 use anyhow::Context as _;
 use aws_sdk_s3::error::{CompleteMultipartUploadError, UploadPartError};
-use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl};
+use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part};
 use aws_sdk_s3::output::{CompleteMultipartUploadOutput, UploadPartOutput};
 use aws_sdk_s3::types::{ByteStream, SdkError};
 use bytesize::{GIB, MIB};
 use futures::future::BoxFuture;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
-use futures::{AsyncWrite, Future, FutureExt, TryFutureExt};
+use futures::{AsyncWrite, Future, FutureExt, StreamExt, TryFutureExt};
 use std::mem;
 use std::pin::Pin;
 
@@ -187,20 +187,25 @@ impl<'a> AsyncMultipartUpload<'a> {
             anyhow::bail!("Max uploading parts must not be 0")
         }
 
-        let list_parts_result = client
+        let mut parts: Vec<Part> = vec![];
+
+        let mut list_parts_result = client
             .list_parts()
             .bucket(&dst.bucket)
             .key(&dst.key)
-            .max_parts(
-                max_uploading_parts
-                    .unwrap_or(DEFAULT_MAX_UPLOADING_PARTS)
-                    .try_into()?,
-            )
             .upload_id(&upload_id)
-            .send()
-            .await?;
+            .into_paginator()
+            .send();
 
-        let parts = list_parts_result.parts().unwrap_or(&[]);
+        // Use a paginator to collect all parts if there are more than 1000 parts in a multipart (the default and maximum part limit in list_parts())
+        while let Some(Ok(page)) = list_parts_result.next().await {
+            parts.append(&mut page.parts().unwrap_or_default().to_vec());
+
+            if !page.is_truncated() {
+                break;
+            }
+        }
+
         let completed_parts: Vec<CompletedPart> = parts
             .iter()
             .map(|part| {
@@ -227,11 +232,7 @@ impl<'a> AsyncMultipartUpload<'a> {
         let mut part_numbers: Vec<i32> = parts.iter().map(|p| p.part_number()).collect();
         part_numbers.sort();
 
-        let latest_part_number = if !part_numbers.is_empty() {
-            part_numbers[part_numbers.len() - 1] + 1
-        } else {
-            1
-        };
+        let latest_part_number = parts.iter().map(|p| p.part_number()).max().unwrap_or(0) + 1;
 
         Ok(AsyncMultipartUpload {
             client,
