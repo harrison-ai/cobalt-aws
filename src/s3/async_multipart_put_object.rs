@@ -157,6 +157,133 @@ impl<'a> AsyncMultipartUpload<'a> {
         })
     }
 
+    /// Import an existing [AsyncMultipartUpload] to continue uploading.
+    ///
+    /// * `client`              - S3 client to use.
+    /// * `upload_id`           - The multipart upload ID to resume.
+    /// * `dst`                 - The [S3Object] to write the object into.
+    /// * `part_size`           - How large, in bytes, each part should be. Must be
+    /// larger than 5MIB and smaller that 5GIB.
+    /// * `max_uploading_parts` - How many parts to upload concurrently,
+    /// Must be larger than 0 (defaults to 100).
+    #[instrument(skip(client))]
+    pub async fn from(
+        client: &'a Client,
+        upload_id: String,
+        dst: &S3Object,
+        part_size: usize,
+        max_uploading_parts: Option<usize>,
+    ) -> anyhow::Result<AsyncMultipartUpload<'a>> {
+        event!(Level::DEBUG, "New AsyncMultipartUpload");
+        if part_size < MIN_PART_SIZE {
+            anyhow::bail!("part_size was {part_size}, can not be less than {MIN_PART_SIZE}")
+        }
+        if part_size > MAX_PART_SIZE {
+            anyhow::bail!("part_size was {part_size}, can not be more than {MAX_PART_SIZE}")
+        }
+
+        //Check that user did not send in invalid parameter
+        if let Some(0) = max_uploading_parts {
+            anyhow::bail!("Max uploading parts must not be 0")
+        }
+
+        // let result = client
+        //     .create_multipart_upload()
+        //     .bucket(&dst.bucket)
+        //     .key(&dst.key)
+        //     .acl(ObjectCannedAcl::BucketOwnerFullControl)
+        //     .send()
+        //     .await?;
+
+        let list_parts_result = client
+            .list_parts()
+            .bucket(&dst.bucket)
+            .key(&dst.key)
+            .max_parts(
+                max_uploading_parts
+                    .unwrap_or(DEFAULT_MAX_UPLOADING_PARTS)
+                    .try_into()?,
+            )
+            .upload_id(&upload_id)
+            .send()
+            .await?;
+
+        let parts = list_parts_result.parts().unwrap_or(&[]);
+        let completed_parts: Vec<CompletedPart> = parts
+            .iter()
+            .map(|part| {
+                // Part has Option<&str> but CompletedPart has Option<String>
+                // Convert any &str's to String's but retain them as Options still
+
+                let e_tag = if let Some(e_tag) = part.e_tag() {
+                    Some(e_tag.to_string())
+                } else {
+                    None
+                };
+
+                let checksum_crc32 = if let Some(checksum_crc32) = part.checksum_crc32() {
+                    Some(checksum_crc32.to_string())
+                } else {
+                    None
+                };
+
+                let checksum_crc32_c = if let Some(checksum_crc32_c) = part.checksum_crc32_c() {
+                    Some(checksum_crc32_c.to_string())
+                } else {
+                    None
+                };
+
+                let checksum_sha1 = if let Some(checksum_sha1) = part.checksum_sha1() {
+                    Some(checksum_sha1.to_string())
+                } else {
+                    None
+                };
+
+                let checksum_sha256 = if let Some(checksum_sha256) = part.checksum_sha256() {
+                    Some(checksum_sha256.to_string())
+                } else {
+                    None
+                };
+
+                CompletedPart::builder()
+                    .set_e_tag(e_tag)
+                    .set_checksum_crc32(checksum_crc32)
+                    .set_checksum_crc32_c(checksum_crc32_c)
+                    .set_checksum_sha1(checksum_sha1)
+                    .set_checksum_sha256(checksum_sha256)
+                    .part_number(part.part_number())
+                    .build()
+            })
+            .collect();
+
+        let mut part_numbers: Vec<i32> = parts.iter().map(|p| p.part_number()).collect();
+        part_numbers.sort();
+
+        let latest_part_number = if !part_numbers.is_empty() {
+            part_numbers[part_numbers.len() - 1] + 1
+        } else {
+            1
+        };
+
+        Ok(AsyncMultipartUpload {
+            client,
+            dst: dst.clone(),
+            upload_id: upload_id.clone(),
+            part_size,
+            max_uploading_parts: max_uploading_parts.unwrap_or(DEFAULT_MAX_UPLOADING_PARTS),
+            state: AsyncMultipartUploadState::Writing {
+                uploads: vec![],
+                buffer: Vec::with_capacity(part_size),
+                part_number: latest_part_number,
+                completed_parts: completed_parts,
+            },
+        })
+    }
+
+    pub fn get_upload_id(&self) -> &str {
+        self.upload_id.as_str()
+    }
+
     #[instrument(skip(buffer))]
     fn upload_part<'b>(&self, buffer: Vec<u8>, part_number: i32) -> MultipartUploadFuture<'b> {
         event!(Level::DEBUG, "Uploading Part");
@@ -529,6 +656,47 @@ mod tests {
         upload.close().await.unwrap();
         let body = fetch_bytes(&client, &dst).await.unwrap();
         assert_eq!(body.len(), buffer_len);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_import_and_continue_an_upload() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = 5_usize * MIB as usize;
+
+        // create an existing upload to start
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.flush().await.unwrap();
+
+        let mut resumed_upload = AsyncMultipartUpload::from(
+            &client,
+            upload.get_upload_id().to_string(),
+            &dst,
+            5_usize * MIB as usize,
+            None,
+        )
+        .await
+        .unwrap();
+
+        resumed_upload
+            .write_all(&vec![0; buffer_len])
+            .await
+            .unwrap();
+        resumed_upload.close().await.unwrap();
+
+        // body with one single part
+        let final_body = fetch_bytes(&client, &dst).await.unwrap();
+        assert_eq!(final_body.len(), 2_usize * buffer_len);
         Ok(())
     }
 
