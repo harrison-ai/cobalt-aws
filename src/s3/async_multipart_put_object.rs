@@ -187,14 +187,6 @@ impl<'a> AsyncMultipartUpload<'a> {
             anyhow::bail!("Max uploading parts must not be 0")
         }
 
-        // let result = client
-        //     .create_multipart_upload()
-        //     .bucket(&dst.bucket)
-        //     .key(&dst.key)
-        //     .acl(ObjectCannedAcl::BucketOwnerFullControl)
-        //     .send()
-        //     .await?;
-
         let list_parts_result = client
             .list_parts()
             .bucket(&dst.bucket)
