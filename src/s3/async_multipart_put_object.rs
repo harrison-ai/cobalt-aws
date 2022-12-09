@@ -686,7 +686,7 @@ mod tests {
             .unwrap();
         resumed_upload.close().await.unwrap();
 
-        // body with one single part
+        // body with 2 parts uploaded in different upload instances
         let final_body = fetch_bytes(&client, &dst).await.unwrap();
         assert_eq!(final_body.len(), 2_usize * buffer_len);
         Ok(())
