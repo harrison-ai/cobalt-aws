@@ -2,14 +2,14 @@
 
 use anyhow::Context as _;
 use aws_sdk_s3::error::{CompleteMultipartUploadError, UploadPartError};
-use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl};
+use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part};
 use aws_sdk_s3::output::{CompleteMultipartUploadOutput, UploadPartOutput};
 use aws_sdk_s3::types::{ByteStream, SdkError};
 use bytesize::{GIB, MIB};
 use futures::future::BoxFuture;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
-use futures::{AsyncWrite, Future, FutureExt, TryFutureExt};
+use futures::{AsyncWrite, Future, FutureExt, StreamExt, TryFutureExt};
 use std::mem;
 use std::pin::Pin;
 
@@ -155,6 +155,102 @@ impl<'a> AsyncMultipartUpload<'a> {
                 completed_parts: vec![],
             },
         })
+    }
+
+    /// Import an existing [AsyncMultipartUpload] to continue uploading.
+    ///
+    /// * `client`              - S3 client to use.
+    /// * `upload_id`           - The multipart upload ID to resume.
+    /// * `dst`                 - The [S3Object] to write the object into.
+    /// * `part_size`           - How large, in bytes, each part should be. Must be
+    /// larger than 5MIB and smaller that 5GIB.
+    /// * `max_uploading_parts` - How many parts to upload concurrently,
+    /// Must be larger than 0 (defaults to 100).
+    #[instrument(skip(client))]
+    pub async fn from(
+        client: &'a Client,
+        upload_id: String,
+        dst: &S3Object,
+        part_size: usize,
+        max_uploading_parts: Option<usize>,
+    ) -> anyhow::Result<AsyncMultipartUpload<'a>> {
+        event!(Level::DEBUG, "New AsyncMultipartUpload");
+        if part_size < MIN_PART_SIZE {
+            anyhow::bail!("part_size was {part_size}, can not be less than {MIN_PART_SIZE}")
+        }
+        if part_size > MAX_PART_SIZE {
+            anyhow::bail!("part_size was {part_size}, can not be more than {MAX_PART_SIZE}")
+        }
+
+        //Check that user did not send in invalid parameter
+        if let Some(0) = max_uploading_parts {
+            anyhow::bail!("Max uploading parts must not be 0")
+        }
+
+        let mut parts: Vec<Part> = vec![];
+
+        let mut list_parts_result = client
+            .list_parts()
+            .bucket(&dst.bucket)
+            .key(&dst.key)
+            .upload_id(&upload_id)
+            .into_paginator()
+            .send();
+
+        // Use a paginator to collect all parts if there are more than 1000 parts in a multipart (the default and maximum part limit in list_parts())
+        // You could use `.into_paginator().items().send()` here to get a flattened list of items, but this seems to not work
+        // Any use of the items from that method results in a Future that never resolves, causing the program to hang indefinitely
+        // So instead, we use this pagination method which is still alright!
+        while let Some(Ok(page)) = list_parts_result.next().await {
+            parts.append(&mut page.parts().unwrap_or_default().to_vec());
+
+            if !page.is_truncated() {
+                break;
+            }
+        }
+
+        let completed_parts: Vec<CompletedPart> = parts
+            .iter()
+            .map(|part| {
+                // Part has Option<&str> but CompletedPart has Option<String>
+                // Convert any &str's to String's but retain them as Options still
+
+                let e_tag = part.e_tag().map(|s| s.to_string());
+                let checksum_crc32 = part.checksum_crc32().map(|s| s.to_string());
+                let checksum_crc32_c = part.checksum_crc32_c().map(|s| s.to_string());
+                let checksum_sha1 = part.checksum_sha1().map(|s| s.to_string());
+                let checksum_sha256 = part.checksum_sha256().map(|s| s.to_string());
+
+                CompletedPart::builder()
+                    .set_e_tag(e_tag)
+                    .set_checksum_crc32(checksum_crc32)
+                    .set_checksum_crc32_c(checksum_crc32_c)
+                    .set_checksum_sha1(checksum_sha1)
+                    .set_checksum_sha256(checksum_sha256)
+                    .part_number(part.part_number())
+                    .build()
+            })
+            .collect();
+
+        let latest_part_number = parts.iter().map(|p| p.part_number()).max().unwrap_or(0) + 1;
+
+        Ok(AsyncMultipartUpload {
+            client,
+            dst: dst.clone(),
+            upload_id: upload_id.clone(),
+            part_size,
+            max_uploading_parts: max_uploading_parts.unwrap_or(DEFAULT_MAX_UPLOADING_PARTS),
+            state: AsyncMultipartUploadState::Writing {
+                uploads: vec![],
+                buffer: Vec::with_capacity(part_size),
+                part_number: latest_part_number,
+                completed_parts,
+            },
+        })
+    }
+
+    pub fn get_upload_id(&self) -> &str {
+        self.upload_id.as_str()
     }
 
     #[instrument(skip(buffer))]
@@ -529,6 +625,47 @@ mod tests {
         upload.close().await.unwrap();
         let body = fetch_bytes(&client, &dst).await.unwrap();
         assert_eq!(body.len(), buffer_len);
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[named]
+    async fn test_import_and_continue_an_upload() -> Result<()> {
+        let client = localstack_test_client().await;
+        let test_bucket = "test-multipart-bucket";
+        let mut rng = seeded_rng(function_name!());
+        let dst_key = gen_random_file_name(&mut rng);
+
+        create_bucket(&client, test_bucket).await.unwrap();
+        let buffer_len = 5_usize * MIB as usize;
+
+        // create an existing upload to start
+        let dst = S3Object::new(test_bucket, &dst_key);
+        let mut upload = AsyncMultipartUpload::new(&client, &dst, 5_usize * MIB as usize, None)
+            .await
+            .unwrap();
+        upload.write_all(&vec![0; buffer_len]).await.unwrap();
+        upload.flush().await.unwrap();
+
+        let mut resumed_upload = AsyncMultipartUpload::from(
+            &client,
+            upload.get_upload_id().to_string(),
+            &dst,
+            5_usize * MIB as usize,
+            None,
+        )
+        .await
+        .unwrap();
+
+        resumed_upload
+            .write_all(&vec![0; buffer_len])
+            .await
+            .unwrap();
+        resumed_upload.close().await.unwrap();
+
+        // body with 2 parts uploaded in different upload instances
+        let final_body = fetch_bytes(&client, &dst).await.unwrap();
+        assert_eq!(final_body.len(), 2_usize * buffer_len);
         Ok(())
     }
 
