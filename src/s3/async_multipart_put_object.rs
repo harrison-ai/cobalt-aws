@@ -198,6 +198,9 @@ impl<'a> AsyncMultipartUpload<'a> {
             .send();
 
         // Use a paginator to collect all parts if there are more than 1000 parts in a multipart (the default and maximum part limit in list_parts())
+        // You could use `.into_paginator().items().send()` here to get a flattened list of items, but this seems to not work
+        // Any use of the items from that method results in a Future that never resolves, causing the program to hang indefinitely
+        // So instead, we use this pagination method which is still alright!
         while let Some(Ok(page)) = list_parts_result.next().await {
             parts.append(&mut page.parts().unwrap_or_default().to_vec());
 
@@ -228,9 +231,6 @@ impl<'a> AsyncMultipartUpload<'a> {
                     .build()
             })
             .collect();
-
-        let mut part_numbers: Vec<i32> = parts.iter().map(|p| p.part_number()).collect();
-        part_numbers.sort();
 
         let latest_part_number = parts.iter().map(|p| p.part_number()).max().unwrap_or(0) + 1;
 
