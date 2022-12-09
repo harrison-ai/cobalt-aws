@@ -207,35 +207,11 @@ impl<'a> AsyncMultipartUpload<'a> {
                 // Part has Option<&str> but CompletedPart has Option<String>
                 // Convert any &str's to String's but retain them as Options still
 
-                let e_tag = if let Some(e_tag) = part.e_tag() {
-                    Some(e_tag.to_string())
-                } else {
-                    None
-                };
-
-                let checksum_crc32 = if let Some(checksum_crc32) = part.checksum_crc32() {
-                    Some(checksum_crc32.to_string())
-                } else {
-                    None
-                };
-
-                let checksum_crc32_c = if let Some(checksum_crc32_c) = part.checksum_crc32_c() {
-                    Some(checksum_crc32_c.to_string())
-                } else {
-                    None
-                };
-
-                let checksum_sha1 = if let Some(checksum_sha1) = part.checksum_sha1() {
-                    Some(checksum_sha1.to_string())
-                } else {
-                    None
-                };
-
-                let checksum_sha256 = if let Some(checksum_sha256) = part.checksum_sha256() {
-                    Some(checksum_sha256.to_string())
-                } else {
-                    None
-                };
+                let e_tag = part.e_tag().map(|s| s.to_string());
+                let checksum_crc32 = part.checksum_crc32().map(|s| s.to_string());
+                let checksum_crc32_c = part.checksum_crc32_c().map(|s| s.to_string());
+                let checksum_sha1 = part.checksum_sha1().map(|s| s.to_string());
+                let checksum_sha256 = part.checksum_sha256().map(|s| s.to_string());
 
                 CompletedPart::builder()
                     .set_e_tag(e_tag)
@@ -267,7 +243,7 @@ impl<'a> AsyncMultipartUpload<'a> {
                 uploads: vec![],
                 buffer: Vec::with_capacity(part_size),
                 part_number: latest_part_number,
-                completed_parts: completed_parts,
+                completed_parts,
             },
         })
     }
