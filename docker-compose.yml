@@ -1,8 +1,8 @@
-version: '3.7'
+version: '3.8'
 services:
 
   cargo:
-    image: harrisonai/rust:1.63-1.1
+    image: harrisonai/rust:1.67-1.0
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
