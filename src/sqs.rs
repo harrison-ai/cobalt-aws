@@ -1,8 +1,8 @@
 //! A collection of wrappers around the [aws_sdk_sqs](https://docs.rs/aws-sdk-sqs/latest/aws_sdk_sqs/) crate.
 
 use anyhow::Result;
-use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
 use aws_sdk_sqs::config::Builder;
+use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
 use aws_types::SdkConfig;
 use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
 
