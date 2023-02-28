@@ -3,7 +3,7 @@
 use anyhow::Result;
 use aws_sdk_s3::error::{GetObjectError, ListObjectsV2Error};
 use aws_sdk_s3::types::SdkError;
-use aws_sdk_s3::{config, model, Endpoint};
+use aws_sdk_s3::{config::Builder, model};
 use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
@@ -68,9 +68,9 @@ Then `aws_sdk_s3::Client::new(&shared_config)` to create the `Client`.
 "#
 )]
 pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
-    let mut builder = config::Builder::from(shared_config);
+    let mut builder = Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
-        builder = builder.endpoint_resolver(Endpoint::immutable(uri));
+        builder = builder.endpoint_url(uri.to_string()).force_path_style(true);
     }
     Ok(Client::from_conf(builder.build()))
 }
@@ -159,7 +159,6 @@ mod test {
     use crate::s3::S3Object;
     use anyhow::Result;
     use aws_config;
-    use aws_sdk_s3::error::CreateBucketError;
     use aws_sdk_s3::error::CreateBucketErrorKind;
     use aws_sdk_s3::model;
     use aws_sdk_s3::Client;
@@ -192,15 +191,15 @@ mod test {
             .await
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
-            Err(SdkError::ServiceError {
-                err:
-                    CreateBucketError {
-                        kind: CreateBucketErrorKind::BucketAlreadyOwnedByYou(_),
-                        ..
-                    },
-                ..
-            }) => Ok::<(), anyhow::Error>(()),
-            Err(e) => Err(anyhow::Error::from(e)),
+            Err(e) => match e {
+                SdkError::ServiceError(ref context) => match context.err().kind {
+                    CreateBucketErrorKind::BucketAlreadyOwnedByYou(_) => {
+                        Ok::<(), anyhow::Error>(())
+                    }
+                    _ => Err(anyhow::Error::from(e)),
+                },
+                e => Err(anyhow::Error::from(e)),
+            },
         }
     }
 

@@ -1,7 +1,7 @@
 //! A collection of wrappers around the [aws_sdk_athena](https://docs.rs/aws-sdk-athena/latest/aws_sdk_athena/) crate.
 
 use anyhow::Result;
-use aws_sdk_athena::{config, Endpoint};
+use aws_sdk_athena::config::Builder;
 use aws_types::SdkConfig;
 
 use crate::localstack;
@@ -55,9 +55,9 @@ Then `aws_sdk_athena::Client::new(&shared_config)` to create the `Client`.
 "#
 )]
 pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
-    let mut builder = config::Builder::from(shared_config);
+    let mut builder = Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
-        builder = builder.endpoint_resolver(Endpoint::immutable(uri));
+        builder = builder.endpoint_url(uri.to_string());
     }
     Ok(Client::from_conf(builder.build()))
 }
