@@ -1,7 +1,6 @@
 //! A collection of wrappers around the [aws_types::SdkConfig](https://docs.rs/aws-types/0.13.0/aws_types/sdk_config/struct.SdkConfig.html) object.
 
 use anyhow::Result;
-use aws_smithy_http::endpoint::Endpoint;
 use aws_types::SdkConfig;
 
 use crate::localstack;
@@ -47,7 +46,7 @@ use crate::localstack;
 pub async fn load_from_env() -> Result<SdkConfig> {
     let mut shared_config = aws_config::from_env();
     if let Some(uri) = localstack::get_endpoint_uri()? {
-        shared_config = shared_config.endpoint_resolver(Endpoint::immutable(uri));
+        shared_config = shared_config.endpoint_url(uri.to_string());
     }
     Ok(shared_config.load().await)
 }

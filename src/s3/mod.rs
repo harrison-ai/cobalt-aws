@@ -3,7 +3,7 @@
 use anyhow::Result;
 use aws_sdk_s3::error::{GetObjectError, ListObjectsV2Error};
 use aws_sdk_s3::types::SdkError;
-use aws_sdk_s3::{config, model, Endpoint};
+use aws_sdk_s3::{config::Builder, model};
 use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
@@ -68,9 +68,9 @@ Then `aws_sdk_s3::Client::new(&shared_config)` to create the `Client`.
 "#
 )]
 pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
-    let mut builder = config::Builder::from(shared_config);
+    let mut builder = Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
-        builder = builder.endpoint_resolver(Endpoint::immutable(uri));
+        builder = builder.endpoint_url(uri.to_string());
     }
     Ok(Client::from_conf(builder.build()))
 }
