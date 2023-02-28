@@ -70,7 +70,7 @@ Then `aws_sdk_s3::Client::new(&shared_config)` to create the `Client`.
 pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
     let mut builder = Builder::from(shared_config);
     if let Some(uri) = localstack::get_endpoint_uri()? {
-        builder = builder.endpoint_url(uri.to_string());
+        builder = builder.endpoint_url(uri.to_string()).force_path_style(true);
     }
     Ok(Client::from_conf(builder.build()))
 }
