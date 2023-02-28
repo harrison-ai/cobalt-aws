@@ -159,7 +159,6 @@ mod test {
     use crate::s3::S3Object;
     use anyhow::Result;
     use aws_config;
-    use aws_sdk_s3::error::CreateBucketError;
     use aws_sdk_s3::error::CreateBucketErrorKind;
     use aws_sdk_s3::model;
     use aws_sdk_s3::Client;
@@ -192,15 +191,15 @@ mod test {
             .await
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
-            Err(SdkError::ServiceError {
-                err:
-                    CreateBucketError {
-                        kind: CreateBucketErrorKind::BucketAlreadyOwnedByYou(_),
-                        ..
-                    },
-                ..
-            }) => Ok::<(), anyhow::Error>(()),
-            Err(e) => Err(anyhow::Error::from(e)),
+            Err(e) => match e {
+                SdkError::ServiceError(ref context) => match context.err().kind {
+                    CreateBucketErrorKind::BucketAlreadyOwnedByYou(_) => {
+                        Ok::<(), anyhow::Error>(())
+                    }
+                    _ => Err(anyhow::Error::from(e)),
+                },
+                e => Err(anyhow::Error::from(e)),
+            },
         }
     }
 
