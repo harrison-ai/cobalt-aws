@@ -1,6 +1,6 @@
 # Docker image used for running `awslocal`
 
-FROM python:3.10-slim-bullseye
+FROM python:3.11-slim-bullseye
 
 RUN apt-get update && \
     apt-get install --yes --quiet --no-install-recommends \
