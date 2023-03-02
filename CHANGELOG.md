@@ -19,8 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated rust crate `clap` to 4.1.8
 - Updated rust crate `bytesize` to 1.2.0
 - Updated rust crate `serial_test` to v1
-- Updated `localstack docker tag` to 1.4.0
-- Updated `python docker tag` to v3.11
 
 ## 0.9.2
 
