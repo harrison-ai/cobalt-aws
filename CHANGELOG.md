@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.10.0
+
+- Updated various AWS SDK dependencies. Note that the new versions include significant changes to endpoint URL resolution, which may introduce breaking changes for consumers; see the [`aws-sdk-rust` release notes](https://github.com/awslabs/aws-sdk-rust/releases/tag/release-2023-01-13) for details.
+  - Updated `aws-config ` to 0.54.1
+  - Updated `aws-sdk-athena` to 0.24.0
+  - Updated `aws-sdk-s3` to 0.24.0
+  - Updated `aws-sdk-sqs` to 0.24.0
+  - Updated `aws-smithy-http` 0.54.4
+  - Updated `aws-types` to 0.54.1
+- Updated rust crate `tokio` to 1.26.0
+- Updated rust crate `clap` to 4.1.8
+- Updated rust crate `bytesize` to 1.2.0
+- Updated rust crate `serial_test` to v1
+
 ## 0.9.2
 
 - Add support to continue an existing AsyncMultipartUpload.
