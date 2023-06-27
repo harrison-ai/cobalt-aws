@@ -2,7 +2,7 @@ version: '3.8'
 services:
 
   cargo:
-    image: harrisonai/rust:1.67-1.0
+    image: ghcr.io/harrison-ai/rust:1.67-1
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
