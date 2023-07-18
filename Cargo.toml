@@ -17,7 +17,7 @@ include = [
 ]
 
 [dependencies]
-anyhow = "1.0.69"
+anyhow = "1.0.72"
 async-trait = "0.1.71"
 aws-config = "0.54.1"
 aws-sdk-athena = "0.24.0"
