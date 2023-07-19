@@ -21,6 +21,23 @@ use tracing_subscriber::filter::EnvFilter;
 // We provide this re-export so that the user doesn't need to have lambda_runtime as a direct dependency.
 pub use lambda_runtime::Error;
 
+#[derive(Debug, Parser)]
+struct CheckLambda {
+    #[arg(env)]
+    aws_lambda_function_name: Option<String>,
+}
+
+/// Determine whether the code is being executed within an AWS Lambda.
+///
+/// This function can be used to write binaries that are able to run both locally
+/// or as a Lambda function.
+pub fn running_on_lambda() -> Result<bool> {
+    let check_lambda = CheckLambda::try_parse_from(empty::<OsString>())
+        .context("An error occurred while parsing environment variables for message context.")?;
+    Ok(check_lambda.aws_lambda_function_name.is_some())
+}
+
+
 /// A required trait of the `Context` type used by message handler functions in [run_message_handler].
 ///
 /// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type.

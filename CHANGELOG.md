@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Added `running_on_lambda()` to support programs running both locally and on AWS Lambda.
+
 ## 0.10.0
 
 - Updated various AWS SDK dependencies. Note that the new versions include significant changes to endpoint URL resolution, which may introduce breaking changes for consumers; see the [`aws-sdk-rust` release notes](https://github.com/awslabs/aws-sdk-rust/releases/tag/release-2023-01-13) for details.
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - Added AsyncMultipartUpload.
  - Add S3Object.
- - Updated `aws_lambda_events` to 0.7.2 
+ - Updated `aws_lambda_events` to 0.7.2
  - Updated `aws_lambda_runtime` to 0.7.1
  - Updated `aws-config` to 0.51.0
  - Updated `aws-sdk-athena` to 0.21.0
