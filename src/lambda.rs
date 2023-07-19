@@ -6,7 +6,7 @@
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
-use aws_lambda_events::event::sqs::SqsEvent;
+pub use aws_lambda_events::event::sqs::SqsEvent;
 use clap::Parser;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::FutureExt;
@@ -43,7 +43,7 @@ pub fn running_on_lambda() -> Result<bool> {
 /// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type
 /// in order to use the `Context` with [run_message_handler].
 #[async_trait]
-pub trait LambdaContext<Env>: Sized {
+pub trait LambdaContext<Env, T>: Sized {
     /// # Example
     ///
     /// ```no_run
@@ -85,6 +85,19 @@ struct HandlerEnv {
     /// configured for the [event source mapping](https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html#invocation-eventsourcemapping-batching).
     #[arg(env, default_value_t = 1)]
     record_concurrency: usize,
+}
+
+pub trait EventRecords {
+    fn records(&self) -> Vec<Option<String>>;
+}
+
+impl EventRecords for SqsEvent {
+    fn records(&self) -> Vec<Option<String>> {
+        self.records
+            .iter()
+            .map(|record| record.body.clone())
+            .collect()
+    }
 }
 
 /// Executes a message handler against all the messages received in a batch
@@ -183,12 +196,15 @@ struct HandlerEnv {
 /// If any errors are raised during init, or from the `message_handler` function, then the entire message
 /// batch will be considered to have failed. Error messages will be logged to stdout in a format compatible
 /// with CloudWatch, and the message batch being processed will be returned to the original queue.
-pub async fn run_message_handler<F, Fut, Msg, Context, Env>(message_handler: F) -> Result<(), Error>
+pub async fn run_message_handler<T, F, Fut, Msg, Context, Env>(
+    message_handler: F,
+) -> Result<(), Error>
 where
+    T: for<'de> serde::de::Deserialize<'de> + EventRecords,
     F: Fn(Msg, Arc<Context>) -> Fut,
     Fut: Future<Output = Result<()>>,
     Msg: serde::de::DeserializeOwned,
-    Context: LambdaContext<Env> + std::fmt::Debug,
+    Context: LambdaContext<Env, T> + std::fmt::Debug,
     Env: Parser + std::fmt::Debug,
 {
     // Perform initial setup outside of the runtime to avoid this code being run
@@ -227,7 +243,7 @@ where
     let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
         .context("An error occured while parsing environment variable for handler")?;
 
-    lambda_runtime::run(service_fn(|event: LambdaEvent<SqsEvent>| async {
+    lambda_runtime::run(service_fn(|event: LambdaEvent<T>| async {
         let (event, _context) = event.into_parts();
         // Process the event and capture any errors
         let result = (|| async {
@@ -243,13 +259,10 @@ where
 
             // Process the records in the event batch concurrently, up to `RECORD_CONCURRENCY`.
             // If any of them fail, return immediately.
-            stream::iter(event.records)
-                .map(|record| {
-                    let body = record
-                        .body
-                        .as_ref()
-                        .with_context(|| format!("No SqsMessage body: {:?}", record))?;
-                    let msg = serde_json::from_str::<Msg>(body)
+            stream::iter(event.records())
+                .map(|body| {
+                    let body = body.with_context(|| format!("No SqsMessage body"))?;
+                    let msg = serde_json::from_str::<Msg>(&body)
                         .with_context(|| format!("Error parsing body into message: {}", body))?;
                     Ok((msg, body.to_owned()))
                 })
