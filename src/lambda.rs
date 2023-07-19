@@ -37,7 +37,6 @@ pub fn running_on_lambda() -> Result<bool> {
     Ok(check_lambda.aws_lambda_function_name.is_some())
 }
 
-
 /// A required trait of the `Context` type used by message handler functions in [run_message_handler].
 ///
 /// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type.
