@@ -11,6 +11,7 @@ use clap::Parser;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::FutureExt;
 use lambda_runtime::{service_fn, LambdaEvent};
+use serde::Serialize;
 use std::ffi::OsString;
 use std::future::Future;
 use std::iter::empty;
@@ -87,18 +88,76 @@ struct HandlerEnv {
     record_concurrency: usize,
 }
 
-pub trait EventRecords {
-    fn records(&self) -> Vec<Option<String>>;
+#[async_trait(?Send)]
+pub trait RunnableEventType<Msg, MsgResult, EventResult> {
+    async fn do_the_thing<F, Fut, Context>(
+        &self,
+        message_handler: F,
+        ctx: Arc<Context>,
+    ) -> Result<EventResult>
+    where
+        F: Fn(Msg, Arc<Context>) -> Fut,
+        Fut: Future<Output = Result<MsgResult>>,
+        Msg: serde::de::DeserializeOwned;
 }
 
-impl EventRecords for SqsEvent {
-    fn records(&self) -> Vec<Option<String>> {
-        self.records
-            .iter()
-            .map(|record| record.body.clone())
-            .collect()
+///  Support for Step functions
+pub trait StepFunctionEvent: Clone {}
+
+#[async_trait(?Send)]
+impl<T: StepFunctionEvent, MsgResult> RunnableEventType<T, MsgResult, MsgResult> for T {
+    async fn do_the_thing<F, Fut, Context>(
+        &self,
+        message_handler: F,
+        ctx: Arc<Context>,
+    ) -> Result<MsgResult>
+    where
+        F: Fn(T, Arc<Context>) -> Fut,
+        Fut: Future<Output = Result<MsgResult>>,
+    {
+        message_handler(self.clone(), ctx).await
     }
 }
+
+/// Support for SqsEvent
+
+#[async_trait(?Send)]
+impl<Msg> RunnableEventType<Msg, (), ()> for SqsEvent {
+    async fn do_the_thing<F, Fut, Context>(
+        &self,
+        message_handler: F,
+        ctx: Arc<Context>,
+    ) -> Result<()>
+    where
+        F: Fn(Msg, Arc<Context>) -> Fut,
+        Fut: Future<Output = Result<()>>,
+        Msg: serde::de::DeserializeOwned,
+    {
+        let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
+            .context("An error occured while parsing environment variable for handler")?;
+        // Process the records in the event batch concurrently, up to `RECORD_CONCURRENCY`.
+        // If any of them fail, return immediately.
+        stream::iter(&self.records)
+            .map(|record| {
+                let body = record.body.clone();
+                let body = body.with_context(|| "No SqsMessage body".to_string())?;
+                let msg = serde_json::from_str::<Msg>(&body)
+                    .with_context(|| format!("Error parsing body into message: {}", body))?;
+                Ok((msg, body))
+            })
+            .try_for_each_concurrent(handler_env.record_concurrency, |(msg, body)| async {
+                message_handler(msg, ctx.clone())
+                    .map(move |r| {
+                        r.with_context(|| format!("Error running message handler {}", body))
+                    })
+                    .await?;
+                Ok(())
+            })
+            .await
+    }
+}
+
+// FIXME: Support for S3Event
 
 /// Executes a message handler against all the messages received in a batch
 /// from an SQS event source mapping.
@@ -196,15 +255,16 @@ impl EventRecords for SqsEvent {
 /// If any errors are raised during init, or from the `message_handler` function, then the entire message
 /// batch will be considered to have failed. Error messages will be logged to stdout in a format compatible
 /// with CloudWatch, and the message batch being processed will be returned to the original queue.
-pub async fn run_message_handler<T, F, Fut, Msg, Context, Env>(
+pub async fn run_message_handler<EventType, EventOutput, F, Fut, R, Msg, Context, Env>(
     message_handler: F,
 ) -> Result<(), Error>
 where
-    T: for<'de> serde::de::Deserialize<'de> + EventRecords,
+    EventType: for<'de> serde::de::Deserialize<'de> + RunnableEventType<Msg, R, EventOutput>,
     F: Fn(Msg, Arc<Context>) -> Fut,
-    Fut: Future<Output = Result<()>>,
+    Fut: Future<Output = Result<R>>,
     Msg: serde::de::DeserializeOwned,
-    Context: LambdaContext<Env, T> + std::fmt::Debug,
+    Context: LambdaContext<Env, EventType> + std::fmt::Debug,
+    EventOutput: Serialize,
     Env: Parser + std::fmt::Debug,
 {
     // Perform initial setup outside of the runtime to avoid this code being run
@@ -240,40 +300,20 @@ where
     })()
     .await;
 
-    let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
-        .context("An error occured while parsing environment variable for handler")?;
+    lambda_runtime::run(service_fn(|event: LambdaEvent<EventType>| async {
+        // Check the result of the init phase. If it failed, log the message
+        // and immediately return.
+        let ctx = match &init_result {
+            Ok(x) => x,
+            Err(e) => {
+                tracing::error!("{:?}", e);
+                return Err(anyhow::anyhow!("Failed to initialise lambda."));
+            }
+        };
 
-    lambda_runtime::run(service_fn(|event: LambdaEvent<T>| async {
-        let (event, _context) = event.into_parts();
         // Process the event and capture any errors
-        let result = (|| async {
-            // Check the result of the init phase. If it failed, log the message
-            // and immediately return.
-            let ctx = match &init_result {
-                Ok(x) => x,
-                Err(e) => {
-                    tracing::error!("{:?}", e);
-                    return Err(anyhow::anyhow!("Failed to initialise lambda."));
-                }
-            };
-
-            // Process the records in the event batch concurrently, up to `RECORD_CONCURRENCY`.
-            // If any of them fail, return immediately.
-            stream::iter(event.records())
-                .map(|body| {
-                    let body = body.with_context(|| format!("No SqsMessage body"))?;
-                    let msg = serde_json::from_str::<Msg>(&body)
-                        .with_context(|| format!("Error parsing body into message: {}", body))?;
-                    Ok((msg, body.to_owned()))
-                })
-                .try_for_each_concurrent(handler_env.record_concurrency, |(msg, body)| {
-                    message_handler(msg, ctx.clone()).map(move |r| {
-                        r.with_context(|| format!("Error running message handler {}", body))
-                    })
-                })
-                .await
-        })()
-        .await;
+        let (event, _context) = event.into_parts();
+        let result = event.do_the_thing(&message_handler, ctx.clone()).await;
 
         // Log out the full error, as the lambda_runtime only logs the first line of the error
         // message, which can hide crucial information.
