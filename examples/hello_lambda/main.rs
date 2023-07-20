@@ -1,5 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
+use aws_lambda_events::sqs::SqsEvent;
 use clap::Parser;
 use serde::Deserialize;
 use std::fmt::Debug;
@@ -40,7 +41,7 @@ pub struct Context {
 }
 
 #[async_trait]
-impl LambdaContext<Env> for Context {
+impl LambdaContext<Env, SqsEvent> for Context {
     /// Initialise a shared context object from which will be
     /// passed to all instances of the message handler.
     async fn from_env(env: &Env) -> Result<Context> {

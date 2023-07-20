@@ -90,7 +90,7 @@ struct HandlerEnv {
 
 #[async_trait(?Send)]
 pub trait RunnableEventType<Msg, MsgResult, EventResult> {
-    async fn do_the_thing<F, Fut, Context>(
+    async fn process<F, Fut, Context>(
         &self,
         message_handler: F,
         ctx: Arc<Context>,
@@ -106,7 +106,7 @@ pub trait StepFunctionEvent: Clone {}
 
 #[async_trait(?Send)]
 impl<T: StepFunctionEvent, MsgResult> RunnableEventType<T, MsgResult, MsgResult> for T {
-    async fn do_the_thing<F, Fut, Context>(
+    async fn process<F, Fut, Context>(
         &self,
         message_handler: F,
         ctx: Arc<Context>,
@@ -123,7 +123,7 @@ impl<T: StepFunctionEvent, MsgResult> RunnableEventType<T, MsgResult, MsgResult>
 
 #[async_trait(?Send)]
 impl<Msg> RunnableEventType<Msg, (), ()> for SqsEvent {
-    async fn do_the_thing<F, Fut, Context>(
+    async fn process<F, Fut, Context>(
         &self,
         message_handler: F,
         ctx: Arc<Context>,
@@ -313,7 +313,7 @@ where
 
         // Process the event and capture any errors
         let (event, _context) = event.into_parts();
-        let result = event.do_the_thing(&message_handler, ctx.clone()).await;
+        let result = event.process(&message_handler, ctx.clone()).await;
 
         // Log out the full error, as the lambda_runtime only logs the first line of the error
         // message, which can hide crucial information.

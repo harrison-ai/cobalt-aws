@@ -1,6 +1,7 @@
 //! A minimal template to use as a starting point when writing your lambda function.
 use anyhow::Result;
 use async_trait::async_trait;
+use aws_lambda_events::sqs::SqsEvent;
 use clap::Parser;
 use cobalt_aws::lambda::{
     run_local_handler, run_message_handler, running_on_lambda, Error, LambdaContext, LocalContext,
@@ -27,7 +28,7 @@ pub struct Env {}
 pub struct Context {}
 
 #[async_trait]
-impl LambdaContext<Env> for Context {
+impl LambdaContext<Env, SqsEvent> for Context {
     async fn from_env(env: &Env) -> Result<Context> {
         tracing::info!("Env: {:?}", env);
 
