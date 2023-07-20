@@ -44,12 +44,12 @@ pub fn running_on_lambda() -> Result<bool> {
 /// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type
 /// in order to use the `Context` with [run_message_handler].
 #[async_trait]
-pub trait LambdaContext<Env, T>: Sized {
+pub trait LambdaContext<Env, EventType>: Sized {
     /// # Example
     ///
     /// ```no_run
     /// use anyhow::Result;
-    /// use cobalt_aws::lambda::LambdaContext;
+    /// use cobalt_aws::lambda::{LambdaContext, SqsEvent};
     ///
     /// # use async_trait::async_trait;
     /// # #[derive(Debug)]
@@ -64,7 +64,7 @@ pub trait LambdaContext<Env, T>: Sized {
     /// }
     ///
     /// #[async_trait]
-    /// impl LambdaContext<Env> for Context {
+    /// impl LambdaContext<Env, SqsEvent> for Context {
     ///     /// Initialise a shared context object from which will be
     ///     /// passed to all instances of the message handler.
     ///     async fn from_env(env: &Env) -> Result<Context> {
@@ -156,8 +156,6 @@ impl<Msg> RunnableEventType<Msg, (), ()> for SqsEvent {
             .await
     }
 }
-
-// FIXME: Support for S3Event
 
 /// Executes a message handler against all the messages received in a batch
 /// from an SQS event source mapping.
