@@ -2,13 +2,19 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use clap::Parser;
-use cobalt_aws::lambda::{run_message_handler, Error, LambdaContext};
+use cobalt_aws::lambda::{
+    run_local_handler, run_message_handler, running_on_lambda, Error, LambdaContext, LocalContext,
+};
 use serde::Deserialize;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run_message_handler(message_handler).await
+    if running_on_lambda()? {
+        run_message_handler(message_handler).await
+    } else {
+        run_local_handler(message_handler).await
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,6 +32,17 @@ impl LambdaContext<Env> for Context {
         tracing::info!("Env: {:?}", env);
 
         Ok(Context {})
+    }
+}
+
+#[async_trait]
+impl LocalContext<Message> for Context {
+    async fn from_local() -> Result<Self> {
+        Ok(Context {})
+    }
+
+    async fn msg(&self) -> Result<Message> {
+        Ok(Message {})
     }
 }
 

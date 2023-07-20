@@ -2,6 +2,7 @@
 //!
 //! This wrapper provides wrappers to make it easier to write Lambda functions which consume message from
 //! an SQS queue configured with an [event source mapping](https://docs.aws.amazon.com/lambda/latest/dg/invocation-eventsourcemapping.html).
+//! It also provides mechanisms for running message handlers locally, without the full AWS Lambda environment.
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
@@ -37,9 +38,10 @@ pub fn running_on_lambda() -> Result<bool> {
     Ok(check_lambda.aws_lambda_function_name.is_some())
 }
 
-/// A required trait of the `Context` type used by message handler functions in [run_message_handler].
+/// A trait of the `Context` type, required when using [run_message_handler] to execute the message handler.
 ///
-/// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type.
+/// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type
+/// in order to use the `Context` with [run_message_handler].
 #[async_trait]
 pub trait LambdaContext<Env>: Sized {
     /// # Example
@@ -271,4 +273,155 @@ where
         }
     }))
     .await
+}
+
+/// A trait of the `Context` type, required when using [run_local_handler] to execute the message handler.
+///
+/// All `Context` types must implement the implement the [LocalContext::from_local] and [LocalContext::msg] methods for their corresponding `Msg` type
+/// in order to use the `Context` with [run_local_handler].
+///
+/// # Example
+///
+/// ```no_run
+/// use anyhow::Result;
+/// use serde::Deserialize;
+/// use cobalt_aws::lambda::LocalContext;
+///
+/// # use async_trait::async_trait;
+/// # #[derive(Debug)]
+/// # pub struct Env {
+/// #     pub greeting: String,
+/// # }
+/// #
+/// /// Shared context we build up before invoking the local runner.
+/// #[derive(Debug)]
+/// pub struct Context {
+///     pub greeting: String,
+/// }
+///
+/// #[derive(Debug, Deserialize)]
+/// pub struct Message {
+///     pub target: String,
+/// }
+///
+/// #[async_trait]
+/// impl LocalContext<Message> for Context {
+///     /// Initialise a shared context object from which will be
+///     /// passed to all instances of the message handler.
+///     async fn from_local() -> Result<Self> {
+///         Ok(Context {
+///             greeting: "Hello".to_string(),
+///         })
+///     }
+///
+///     /// Construct a message object to be processed by the message handler.
+///     async fn msg(&self) -> Result<Message> {
+///         Ok(Message {
+///             target: "World".to_string(),
+///         })
+///     }
+/// }
+/// ```
+#[async_trait]
+pub trait LocalContext<Msg>: Sized {
+    /// Construct a new local Context object.
+    async fn from_local() -> Result<Self>;
+    /// Construct a message object to be processed by the message handler.
+    async fn msg(&self) -> Result<Msg>;
+}
+
+/// Executes a message handler against the message provided by the [LocalContext].
+///
+/// The `run_local_handler` function takes care of the following tasks:
+///
+/// * Sets up tracing to ensure all `tracing::<...>!()` calls are JSON formatted for consumption by CloudWatch.
+/// * Initialises a shared context object, which is passed to your handler.
+/// * Initialises a single message object, which is passed to your handler.
+///
+/// ## Writing a message handler
+///
+/// To write a message handler, you need to define four elements:
+///
+/// * The `Message` structure, which defines the structure of the messages which will be sent to your message handler.
+/// * The `Context` structure, which represents the shared state
+///   that will be passed into your message handler. This structure needs to implement the [LocalContext] trait.
+/// * The `message_handler` function, which accepts a `Message` and a `Context`, and performs the desired actions.
+///
+/// # Example
+///
+/// ```no_run
+/// use anyhow::Result;
+/// use async_trait::async_trait;
+/// use clap::Parser;
+/// use serde::Deserialize;
+/// use std::fmt::Debug;
+/// use std::sync::Arc;
+///
+/// use cobalt_aws::lambda::{run_local_handler, Error, LocalContext};
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Error> {
+///     run_local_handler(message_handler).await
+/// }
+///
+/// /// The structure of the messages to be processed by our message handler.
+/// #[derive(Debug, Deserialize)]
+/// pub struct Message {
+///     pub target: String,
+/// }
+///
+///
+/// /// Shared context we build up before invoking the local runner.
+/// #[derive(Debug)]
+/// pub struct Context {
+///     pub greeting: String,
+/// }
+///
+/// #[async_trait]
+/// impl LocalContext<Message> for Context {
+///     /// Initialise a shared context object which will be
+///     /// passed to the message handler.
+///     async fn from_local() -> Result<Self> {
+///         Ok(Context {
+///             greeting: "Hello".to_string(),
+///         })
+///     }
+///
+///     /// Construct a message to be processed.
+///     async fn msg(&self) -> Result<Message> {
+///         Ok(Message {
+///             target: "World".to_string(),
+///         })
+///     }
+/// }
+///
+/// /// Process a single message, within the given context.
+/// async fn message_handler(message: Message, context: Arc<Context>) -> Result<()> {
+///     tracing::debug!("Message: {:?}", message);
+///     tracing::debug!("Context: {:?}", context);
+///
+///     // Log a greeting to the target
+///     tracing::info!("{}, {}!", context.greeting, message.target);
+///
+///     Ok(())
+/// }
+/// ```
+pub async fn run_local_handler<F, Fut, Msg, Context>(message_handler: F) -> Result<(), Error>
+where
+    F: Fn(Msg, Arc<Context>) -> Fut,
+    Fut: Future<Output = Result<()>>,
+    Msg: serde::de::DeserializeOwned,
+    Context: LocalContext<Msg> + std::fmt::Debug,
+{
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .json()
+        .init();
+
+    let ctx = Arc::new(Context::from_local().await?);
+    tracing::info!("Context: {:?}", ctx);
+    message_handler(ctx.msg().await?, ctx).await?;
+    Ok(())
 }

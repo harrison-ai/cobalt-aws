@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
  - Added `running_on_lambda()` to support programs running both locally and on AWS Lambda.
+ - Added `LocalContext` and `run_local_handler` to support executing message handlers locally.
 
 ## 0.10.0
 
