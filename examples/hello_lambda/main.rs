@@ -5,11 +5,17 @@ use serde::Deserialize;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use cobalt_aws::lambda::{run_message_handler, Error, LambdaContext};
+use cobalt_aws::lambda::{
+    run_local_handler, run_message_handler, running_on_lambda, Error, LambdaContext, LocalContext,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run_message_handler(message_handler).await
+    if running_on_lambda()? {
+        run_message_handler(message_handler).await
+    } else {
+        run_local_handler(message_handler).await
+    }
 }
 
 /// The structure of the messages we expect to see on the queue.
@@ -40,6 +46,24 @@ impl LambdaContext<Env> for Context {
     async fn from_env(env: &Env) -> Result<Context> {
         Ok(Context {
             greeting: env.greeting.clone(),
+        })
+    }
+}
+
+#[async_trait]
+impl LocalContext<Message> for Context {
+    /// Initialise a shared context object from which will be
+    /// passed to all instances of the message handler.
+    async fn from_local() -> Result<Self> {
+        Ok(Context {
+            greeting: "Hello".to_string(),
+        })
+    }
+
+    /// Construct a message object to be processed by the message handler.
+    async fn msg(&self) -> Result<Message> {
+        Ok(Message {
+            target: "World".to_string(),
         })
     }
 }
