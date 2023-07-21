@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use cobalt_aws::lambda::{
     run_local_handler, run_message_handler, running_on_lambda, Error, LambdaContext, LocalContext,
+    SqsEvent,
 };
 
 #[tokio::main]
@@ -40,7 +41,7 @@ pub struct Context {
 }
 
 #[async_trait]
-impl LambdaContext<Env> for Context {
+impl LambdaContext<Env, SqsEvent> for Context {
     /// Initialise a shared context object from which will be
     /// passed to all instances of the message handler.
     async fn from_env(env: &Env) -> Result<Context> {
