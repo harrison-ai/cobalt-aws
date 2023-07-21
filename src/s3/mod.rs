@@ -1,9 +1,12 @@
 //! A collection of wrappers around the [aws_sdk_s3](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/) crate.
 
 use anyhow::Result;
-use aws_sdk_s3::error::{GetObjectError, ListObjectsV2Error};
-use aws_sdk_s3::types::SdkError;
-use aws_sdk_s3::{config::Builder, model};
+use aws_sdk_s3::{
+    config::Builder,
+    operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
+    types::Object,
+};
+use aws_smithy_http::result::SdkError;
 use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
@@ -103,7 +106,7 @@ pub fn list_objects(
     client: &Client,
     bucket: impl Into<String>,
     prefix: Option<String>,
-) -> impl Stream<Item = Result<model::Object, SdkError<ListObjectsV2Error>>> + Unpin {
+) -> impl Stream<Item = Result<Object, SdkError<ListObjectsV2Error>>> + Unpin {
     let req = client
         .list_objects_v2()
         .bucket(bucket)
@@ -159,9 +162,11 @@ mod test {
     use crate::s3::S3Object;
     use anyhow::Result;
     use aws_config;
-    use aws_sdk_s3::error::CreateBucketErrorKind;
-    use aws_sdk_s3::model;
-    use aws_sdk_s3::Client;
+    use aws_sdk_s3::{
+        operation::create_bucket::CreateBucketError,
+        types::{BucketLocationConstraint, CreateBucketConfiguration},
+        Client,
+    };
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
     use rand::SeedableRng;
@@ -180,8 +185,8 @@ mod test {
     }
 
     pub async fn create_bucket(client: &Client, bucket: &str) -> Result<()> {
-        let constraint = model::CreateBucketConfiguration::builder()
-            .location_constraint(model::BucketLocationConstraint::ApSoutheast2)
+        let constraint = CreateBucketConfiguration::builder()
+            .location_constraint(BucketLocationConstraint::ApSoutheast2)
             .build();
         match client
             .create_bucket()
@@ -192,10 +197,8 @@ mod test {
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
             Err(e) => match e {
-                SdkError::ServiceError(ref context) => match context.err().kind {
-                    CreateBucketErrorKind::BucketAlreadyOwnedByYou(_) => {
-                        Ok::<(), anyhow::Error>(())
-                    }
+                SdkError::ServiceError(ref context) => match context.err() {
+                    CreateBucketError::BucketAlreadyOwnedByYou(_) => Ok::<(), anyhow::Error>(()),
                     _ => Err(anyhow::Error::from(e)),
                 },
                 e => Err(anyhow::Error::from(e)),
@@ -226,7 +229,8 @@ mod test {
             .await
             .expect("Expected a body")
             .into_bytes()
-            .into())
+            .into_iter()
+            .collect())
     }
 }
 
@@ -257,9 +261,8 @@ mod test_list_objects {
             e.source()
                 .unwrap()
                 .downcast_ref::<ListObjectsV2Error>()
-                .unwrap()
-                .kind,
-            aws_sdk_s3::error::ListObjectsV2ErrorKind::NoSuchBucket(_)
+                .unwrap(),
+            ListObjectsV2Error::NoSuchBucket(_)
         ))
     }
 
@@ -371,6 +374,7 @@ mod test_list_objects {
 mod test_get_object {
     use super::*;
     use aws_config;
+    use aws_sdk_s3::error::ProvideErrorMetadata;
     use futures::AsyncReadExt;
     use serial_test::serial;
     use std::error::Error;
@@ -396,10 +400,7 @@ mod test_get_object {
             .downcast_ref::<GetObjectError>()
             .unwrap();
 
-        assert!(matches!(
-            e.kind,
-            aws_sdk_s3::error::GetObjectErrorKind::Unhandled(_)
-        ));
+        assert!(matches!(e, GetObjectError::Unhandled(_)));
         assert_eq!(e.code(), Some("NoSuchBucket"));
     }
 
@@ -416,10 +417,7 @@ mod test_get_object {
             .downcast_ref::<GetObjectError>()
             .unwrap();
 
-        assert!(matches!(
-            e.kind,
-            aws_sdk_s3::error::GetObjectErrorKind::NoSuchKey(_)
-        ));
+        assert!(matches!(e, GetObjectError::NoSuchKey(_)));
     }
 
     #[tokio::test]
