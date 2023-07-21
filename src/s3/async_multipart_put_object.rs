@@ -1,20 +1,23 @@
 //! Provides ways of interacting with objects in S3.
 
 use anyhow::Context as _;
-use aws_sdk_s3::error::{CompleteMultipartUploadError, UploadPartError};
-use aws_sdk_s3::model::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part};
-use aws_sdk_s3::output::{CompleteMultipartUploadOutput, UploadPartOutput};
-use aws_sdk_s3::types::{ByteStream, SdkError};
+use aws_sdk_s3::{
+    operation::{
+        complete_multipart_upload::{CompleteMultipartUploadError, CompleteMultipartUploadOutput},
+        upload_part::{UploadPartError, UploadPartOutput},
+    },
+    types::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part},
+    Client,
+};
+use aws_smithy_http::{byte_stream::ByteStream, result::SdkError};
 use bytesize::{GIB, MIB};
+use derivative::Derivative;
 use futures::future::BoxFuture;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
 use futures::{AsyncWrite, Future, FutureExt, StreamExt, TryFutureExt};
 use std::mem;
 use std::pin::Pin;
-
-use aws_sdk_s3::Client;
-use derivative::Derivative;
 use tracing::{event, instrument, Level};
 
 use crate::s3::S3Object;
@@ -559,13 +562,14 @@ mod tests {
     use ::function_name::named;
     use anyhow::Result;
     use aws_config;
+    use aws_sdk_s3::Client;
     use bytesize::MIB;
     use futures::prelude::*;
 
     #[tokio::test]
     async fn test_part_size_too_small() {
         let shared_config = aws_config::load_from_env().await;
-        let client = aws_sdk_s3::Client::new(&shared_config);
+        let client = Client::new(&shared_config);
         let dst = S3Object::new("bucket", "key");
         assert!(AsyncMultipartUpload::new(&client, &dst, 0_usize, None)
             .await
@@ -575,7 +579,7 @@ mod tests {
     #[tokio::test]
     async fn test_part_size_too_big() {
         let shared_config = aws_config::load_from_env().await;
-        let client = aws_sdk_s3::Client::new(&shared_config);
+        let client = Client::new(&shared_config);
         let dst = S3Object::new("bucket", "key");
         assert!(
             AsyncMultipartUpload::new(&client, &dst, 5 * GIB as usize + 1, None)
@@ -587,7 +591,7 @@ mod tests {
     #[tokio::test]
     async fn test_max_uploading_parts_is_zero() {
         let shared_config = aws_config::load_from_env().await;
-        let client = aws_sdk_s3::Client::new(&shared_config);
+        let client = Client::new(&shared_config);
         let dst = S3Object::new("bucket", "key");
         assert!(
             AsyncMultipartUpload::new(&client, &dst, 5 * MIB as usize, Some(0))

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - Added `running_on_lambda()` to support programs running both locally and on AWS Lambda.
  - Added `LocalContext` and `run_local_handler` to support executing message handlers locally.
+ - Updates AWS SDK dependencies to:
+    - `aws-config = "0.55.3"`
+    - `aws-sdk-athena = "0.28.0"`
+    - `aws-sdk-s3 = "0.28.0"`
+    - `aws-sdk-sqs = "0.28.0"`
+    - `aws-smithy-http = "0.55.3"`
+    - `aws-types = "0.55.3"`
+    - `aws_lambda_events = "0.10.0"`
+    - `lambda_runtime = "0.8.1"`
 
 ## 0.10.0
 

@@ -1,8 +1,7 @@
 //! A collection of wrappers around the [aws_sdk_sqs](https://docs.rs/aws-sdk-sqs/latest/aws_sdk_sqs/) crate.
 
 use anyhow::Result;
-use aws_sdk_sqs::config::Builder;
-use aws_sdk_sqs::model::SendMessageBatchRequestEntry;
+use aws_sdk_sqs::{config::Builder, types::SendMessageBatchRequestEntry};
 use aws_types::SdkConfig;
 use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
 
@@ -163,8 +162,10 @@ mod test {
 mod test_send_messages_concurrently {
     use super::*;
     use aws_config;
-    use aws_sdk_sqs::error::GetQueueUrlError;
-    use aws_sdk_sqs::model::DeleteMessageBatchRequestEntry;
+    use aws_sdk_sqs::{
+        error::ProvideErrorMetadata, operation::get_queue_url::GetQueueUrlError,
+        types::DeleteMessageBatchRequestEntry,
+    };
     use futures::stream;
     use serial_test::serial;
     use tokio;
@@ -244,10 +245,7 @@ mod test_send_messages_concurrently {
             .downcast_ref::<GetQueueUrlError>()
             .unwrap();
 
-        assert!(matches!(
-            e.kind,
-            aws_sdk_sqs::error::GetQueueUrlErrorKind::QueueDoesNotExist(_)
-        ));
+        assert!(matches!(e, GetQueueUrlError::QueueDoesNotExist(_)));
         assert_eq!(e.code(), Some("AWS.SimpleQueueService.NonExistentQueue"));
     }
 

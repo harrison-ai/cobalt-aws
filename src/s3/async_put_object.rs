@@ -1,7 +1,8 @@
-use aws_sdk_s3::error::PutObjectError;
-use aws_sdk_s3::model::ObjectCannedAcl;
-use aws_sdk_s3::output::PutObjectOutput;
-use aws_sdk_s3::types::SdkError;
+use aws_sdk_s3::{
+    operation::put_object::{PutObjectError, PutObjectOutput},
+    types::ObjectCannedAcl,
+};
+use aws_smithy_http::result::SdkError;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
 use futures::{ready, AsyncWrite, Future};
@@ -135,6 +136,7 @@ mod test_async_put_object {
     #[allow(deprecated)]
     use crate::s3::get_client;
     use aws_config;
+    use aws_sdk_s3::error::ProvideErrorMetadata;
     use futures::{AsyncReadExt, AsyncWriteExt};
     use serial_test::serial;
     use std::error::Error;
@@ -160,10 +162,7 @@ mod test_async_put_object {
             .downcast_ref::<PutObjectError>()
             .unwrap();
 
-        assert!(matches!(
-            e.kind,
-            aws_sdk_s3::error::PutObjectErrorKind::Unhandled(_)
-        ));
+        assert!(matches!(e, PutObjectError::Unhandled(_)));
         assert_eq!(e.code(), Some("NoSuchBucket"));
     }
 
