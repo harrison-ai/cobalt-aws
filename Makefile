@@ -32,6 +32,7 @@ validate:
 
 ## licenses-report: Build license summary file
 licenses-report:
+	rm Cargo.lock || 1
 	$(DCRUN) cargo about generate --output-file ./licenses/licenses.html about.hbs
 
 ## pull:         docker-compose pull

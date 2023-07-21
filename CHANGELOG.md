@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.11.0
+
  - Added `running_on_lambda()` to support programs running both locally and on AWS Lambda.
  - Added `LocalContext` and `run_local_handler` to support executing message handlers locally.
  - **Breaking:** Updated `LambdaContext` to require an `EventType` type, which implements the `RunnableEventType` trait. To resolve this in your existing code, change the definition:
