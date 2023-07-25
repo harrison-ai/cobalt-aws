@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+ - Fixed `run_local_handler` to support message handlers with return types other than `()`.
+
 ## 0.11.0
 
  - Added `running_on_lambda()` to support programs running both locally and on AWS Lambda.
