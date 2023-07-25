@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.11.1
+
  - Fixed `run_local_handler` to support message handlers with return types other than `()`.
 
 ## 0.11.0
