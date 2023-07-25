@@ -439,7 +439,8 @@ pub trait LocalContext<Msg>: Sized {
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Error> {
-///     run_local_handler(message_handler).await
+///     let result = run_local_handler(message_handler).await?;
+///     Ok(())
 /// }
 ///
 /// /// The structure of the messages to be processed by our message handler.
@@ -484,10 +485,10 @@ pub trait LocalContext<Msg>: Sized {
 ///     Ok(())
 /// }
 /// ```
-pub async fn run_local_handler<F, Fut, Msg, Context>(message_handler: F) -> Result<(), Error>
+pub async fn run_local_handler<F, Fut, R, Msg, Context>(message_handler: F) -> Result<R, Error>
 where
     F: Fn(Msg, Arc<Context>) -> Fut,
-    Fut: Future<Output = Result<()>>,
+    Fut: Future<Output = Result<R>>,
     Msg: serde::de::DeserializeOwned,
     Context: LocalContext<Msg> + std::fmt::Debug,
 {
@@ -500,6 +501,5 @@ where
 
     let ctx = Arc::new(Context::from_local().await?);
     tracing::info!("Context: {:?}", ctx);
-    message_handler(ctx.msg().await?, ctx).await?;
-    Ok(())
+    Ok(message_handler(ctx.msg().await?, ctx).await?)
 }
