@@ -198,8 +198,7 @@ mod test {
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
             Err(e) => match e {
-                SdkError::ServiceError(ref context) => match context.err()
-                {
+                SdkError::ServiceError(ref context) => match context.err() {
                     CreateBucketError::BucketAlreadyOwnedByYou(_) => Ok::<(), anyhow::Error>(()),
                     _ => Err(anyhow::Error::from(e)),
                 },
