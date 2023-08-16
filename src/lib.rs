@@ -24,6 +24,6 @@ pub mod config;
 pub mod lambda;
 pub mod s3;
 pub mod sqs;
-
+pub mod types;
 // Internal shared modules
 mod localstack;

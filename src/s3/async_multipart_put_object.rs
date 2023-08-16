@@ -1,7 +1,6 @@
 //! Provides ways of interacting with objects in S3.
 
 use anyhow::Context as _;
-use aws_sdk_s3::primitives::SdkBody;
 use aws_sdk_s3::{
     operation::{
         complete_multipart_upload::{CompleteMultipartUploadError, CompleteMultipartUploadOutput},
@@ -10,22 +9,20 @@ use aws_sdk_s3::{
     types::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part},
     Client,
 };
-use aws_smithy_http::{byte_stream::ByteStream, result::SdkError};
+use aws_smithy_http::byte_stream::ByteStream;
 use bytesize::{GIB, MIB};
 use derivative::Derivative;
 use futures::future::BoxFuture;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
 use futures::{AsyncWrite, Future, FutureExt, StreamExt, TryFutureExt};
-use http::Response;
 use std::mem;
 use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
 use crate::s3::S3Object;
+use crate::types::DefaultSdkError;
 
-/// Convenience wrapper to handle http response
-type DefaultSdkError<E> = SdkError<E, Response<SdkBody>>;
 /// Convenience wrapper for boxed future
 type MultipartUploadFuture<'a> =
     BoxFuture<'a, Result<(UploadPartOutput, i32), DefaultSdkError<UploadPartError>>>;
