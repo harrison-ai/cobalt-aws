@@ -6,7 +6,7 @@ use aws_sdk_s3::{
     operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
     types::Object,
 };
-use aws_smithy_http::result::SdkError;
+
 use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
