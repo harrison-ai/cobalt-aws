@@ -6,7 +6,6 @@ use aws_sdk_s3::{
     operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
     types::Object,
 };
-
 use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
@@ -198,7 +197,8 @@ mod test {
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
             Err(e) => match e {
-                SdkError::ServiceError(ref context) => match context.err() {
+                aws_smithy_http::result::SdkError::ServiceError(ref context) => match context.err()
+                {
                     CreateBucketError::BucketAlreadyOwnedByYou(_) => Ok::<(), anyhow::Error>(()),
                     _ => Err(anyhow::Error::from(e)),
                 },
