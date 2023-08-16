@@ -1,3 +1,4 @@
+use aws_sdk_s3::primitives::SdkBody;
 use aws_sdk_s3::{
     operation::put_object::{PutObjectError, PutObjectOutput},
     types::ObjectCannedAcl,
@@ -6,18 +7,25 @@ use aws_smithy_http::result::SdkError;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
 use futures::{ready, AsyncWrite, Future};
+use http::Response;
 use std::mem;
 use std::pin::Pin;
 
 use crate::s3::Client;
 
+/// Convenience wrapper to handle http response
+type DefaultSdkError<E> = SdkError<E, Response<SdkBody>>;
 // Tracks the state of the AsyncWrite lifecycle for an AsyncPutObject.
 enum PutObjectState<'a> {
     // Open for writing. Can call .write(), .flush(), or .close().
     Writing,
     // In the process of writing the data to s3. We store the future which is performing
     // the pub_object operation.
-    Closing(Pin<Box<dyn Future<Output = Result<PutObjectOutput, SdkError<PutObjectError>>> + 'a>>),
+    Closing(
+        Pin<
+            Box<dyn Future<Output = Result<PutObjectOutput, DefaultSdkError<PutObjectError>>> + 'a>,
+        >,
+    ),
     // We have completed writing to s3.
     Closed,
 }

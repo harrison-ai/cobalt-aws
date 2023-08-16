@@ -1,6 +1,7 @@
 //! Provides ways of interacting with objects in S3.
 
 use anyhow::Context as _;
+use aws_sdk_s3::primitives::SdkBody;
 use aws_sdk_s3::{
     operation::{
         complete_multipart_upload::{CompleteMultipartUploadError, CompleteMultipartUploadOutput},
@@ -16,18 +17,23 @@ use futures::future::BoxFuture;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
 use futures::{AsyncWrite, Future, FutureExt, StreamExt, TryFutureExt};
+use http::Response;
 use std::mem;
 use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
 use crate::s3::S3Object;
 
+/// Convenience wrapper to handle http response
+type DefaultSdkError<E> = SdkError<E, Response<SdkBody>>;
 /// Convenience wrapper for boxed future
 type MultipartUploadFuture<'a> =
-    BoxFuture<'a, Result<(UploadPartOutput, i32), SdkError<UploadPartError>>>;
+    BoxFuture<'a, Result<(UploadPartOutput, i32), DefaultSdkError<UploadPartError>>>;
 /// Convenience wrapper for boxed future
-type CompleteMultipartUploadFuture<'a> =
-    BoxFuture<'a, Result<CompleteMultipartUploadOutput, SdkError<CompleteMultipartUploadError>>>;
+type CompleteMultipartUploadFuture<'a> = BoxFuture<
+    'a,
+    Result<CompleteMultipartUploadOutput, DefaultSdkError<CompleteMultipartUploadError>>,
+>;
 
 /// Holds state for the [AsyncMultipartUpload]
 #[derive(Derivative)]
@@ -287,7 +293,7 @@ impl<'a> AsyncMultipartUpload<'a> {
 
     #[instrument]
     fn try_collect_complete_parts(
-        complete_results: Vec<Result<(UploadPartOutput, i32), SdkError<UploadPartError>>>,
+        complete_results: Vec<Result<(UploadPartOutput, i32), DefaultSdkError<UploadPartError>>>,
     ) -> Result<Vec<CompletedPart>, Error> {
         complete_results
             .into_iter()

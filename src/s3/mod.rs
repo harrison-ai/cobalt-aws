@@ -1,6 +1,7 @@
 //! A collection of wrappers around the [aws_sdk_s3](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/) crate.
 
 use anyhow::Result;
+use aws_sdk_s3::primitives::SdkBody;
 use aws_sdk_s3::{
     config::Builder,
     operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
@@ -12,6 +13,7 @@ use core::fmt::Debug;
 use futures::stream;
 use futures::stream::Stream;
 use futures::{AsyncBufRead, TryStreamExt};
+use http::Response;
 
 use crate::localstack;
 
@@ -25,6 +27,9 @@ mod s3_object;
 pub use async_multipart_put_object::AsyncMultipartUpload;
 pub use async_put_object::AsyncPutObject;
 pub use s3_object::S3Object;
+
+/// Convenience wrapper to handle http response
+type DefaultSdkError<E> = SdkError<E, Response<SdkBody>>;
 
 /// Create an S3 client with LocalStack support.
 ///
@@ -106,7 +111,7 @@ pub fn list_objects(
     client: &Client,
     bucket: impl Into<String>,
     prefix: Option<String>,
-) -> impl Stream<Item = Result<Object, SdkError<ListObjectsV2Error>>> + Unpin {
+) -> impl Stream<Item = Result<Object, DefaultSdkError<ListObjectsV2Error>>> + Unpin {
     let req = client
         .list_objects_v2()
         .bucket(bucket)
@@ -147,7 +152,7 @@ pub async fn get_object(
     client: &Client,
     bucket: &str,
     key: &str,
-) -> Result<impl AsyncBufRead + Debug, SdkError<GetObjectError>> {
+) -> Result<impl AsyncBufRead + Debug, DefaultSdkError<GetObjectError>> {
     let req = client.get_object().bucket(bucket).key(key);
     let resp = req.send().await?;
     Ok(resp
