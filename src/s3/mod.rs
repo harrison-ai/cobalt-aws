@@ -13,7 +13,7 @@ use futures::stream::Stream;
 use futures::{AsyncBufRead, TryStreamExt};
 
 use crate::localstack;
-use crate::types::DefaultSdkError;
+use crate::types::HttpResponseSdkError;
 
 /// Re-export of [aws_sdk_s3::client::Client](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/client/struct.Client.html).
 ///
@@ -106,7 +106,7 @@ pub fn list_objects(
     client: &Client,
     bucket: impl Into<String>,
     prefix: Option<String>,
-) -> impl Stream<Item = Result<Object, DefaultSdkError<ListObjectsV2Error>>> + Unpin {
+) -> impl Stream<Item = Result<Object, HttpResponseSdkError<ListObjectsV2Error>>> + Unpin {
     let req = client
         .list_objects_v2()
         .bucket(bucket)
@@ -147,7 +147,7 @@ pub async fn get_object(
     client: &Client,
     bucket: &str,
     key: &str,
-) -> Result<impl AsyncBufRead + Debug, DefaultSdkError<GetObjectError>> {
+) -> Result<impl AsyncBufRead + Debug, HttpResponseSdkError<GetObjectError>> {
     let req = client.get_object().bucket(bucket).key(key);
     let resp = req.send().await?;
     Ok(resp
@@ -167,7 +167,7 @@ mod test {
         types::{BucketLocationConstraint, CreateBucketConfiguration},
         Client,
     };
-    use aws_smithy_http::result::SdkError;
+    use aws_smithy_http::result::SdkError as SmithySdkError;
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
     use rand::SeedableRng;
@@ -198,7 +198,7 @@ mod test {
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
             Err(e) => match e {
-                SdkError::ServiceError(ref context) => match context.err() {
+                SmithySdkError::ServiceError(ref context) => match context.err() {
                     CreateBucketError::BucketAlreadyOwnedByYou(_) => Ok::<(), anyhow::Error>(()),
                     _ => Err(anyhow::Error::from(e)),
                 },

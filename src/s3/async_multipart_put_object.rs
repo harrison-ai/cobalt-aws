@@ -21,16 +21,14 @@ use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
 use crate::s3::S3Object;
-use crate::types::DefaultSdkError;
+use crate::types::HttpResponseSdkError;
 
 /// Convenience wrapper for boxed future
 type MultipartUploadFuture<'a> =
-    BoxFuture<'a, Result<(UploadPartOutput, i32), DefaultSdkError<UploadPartError>>>;
+    BoxFuture<'a, Result<(UploadPartOutput, i32), HttpResponseSdkError<UploadPartError>>>;
 /// Convenience wrapper for boxed future
-type CompleteMultipartUploadFuture<'a> = BoxFuture<
-    'a,
-    Result<CompleteMultipartUploadOutput, DefaultSdkError<CompleteMultipartUploadError>>,
->;
+type CompleteMultipartUploadFuture<'a> =
+    BoxFuture<'a, Result<CompleteMultipartUploadOutput, HttpResponseSdkError<CompleteMultipartUploadError>>>;
 
 /// Holds state for the [AsyncMultipartUpload]
 #[derive(Derivative)]
@@ -290,7 +288,7 @@ impl<'a> AsyncMultipartUpload<'a> {
 
     #[instrument]
     fn try_collect_complete_parts(
-        complete_results: Vec<Result<(UploadPartOutput, i32), DefaultSdkError<UploadPartError>>>,
+        complete_results: Vec<Result<(UploadPartOutput, i32), HttpResponseSdkError<UploadPartError>>>,
     ) -> Result<Vec<CompletedPart>, Error> {
         complete_results
             .into_iter()

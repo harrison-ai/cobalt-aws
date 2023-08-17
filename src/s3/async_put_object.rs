@@ -9,7 +9,7 @@ use std::mem;
 use std::pin::Pin;
 
 use crate::s3::Client;
-use crate::types::DefaultSdkError;
+use crate::types::HttpResponseSdkError;
 
 // Tracks the state of the AsyncWrite lifecycle for an AsyncPutObject.
 enum PutObjectState<'a> {
@@ -17,11 +17,7 @@ enum PutObjectState<'a> {
     Writing,
     // In the process of writing the data to s3. We store the future which is performing
     // the pub_object operation.
-    Closing(
-        Pin<
-            Box<dyn Future<Output = Result<PutObjectOutput, DefaultSdkError<PutObjectError>>> + 'a>,
-        >,
-    ),
+    Closing(Pin<Box<dyn Future<Output = Result<PutObjectOutput, HttpResponseSdkError<PutObjectError>>> + 'a>>),
     // We have completed writing to s3.
     Closed,
 }
