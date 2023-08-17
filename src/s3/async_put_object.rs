@@ -17,7 +17,14 @@ enum PutObjectState<'a> {
     Writing,
     // In the process of writing the data to s3. We store the future which is performing
     // the pub_object operation.
-    Closing(Pin<Box<dyn Future<Output = Result<PutObjectOutput, HttpResponseSdkError<PutObjectError>>> + 'a>>),
+    Closing(
+        Pin<
+            Box<
+                dyn Future<Output = Result<PutObjectOutput, HttpResponseSdkError<PutObjectError>>>
+                    + 'a,
+            >,
+        >,
+    ),
     // We have completed writing to s3.
     Closed,
 }
