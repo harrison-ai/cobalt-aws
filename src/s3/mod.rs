@@ -167,7 +167,7 @@ mod test {
         types::{BucketLocationConstraint, CreateBucketConfiguration},
         Client,
     };
-    use aws_smithy_http::result::SdkError as SmithySdkError;
+    use aws_smithy_http::result::SdkError;
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
     use rand::SeedableRng;
@@ -198,7 +198,7 @@ mod test {
         {
             Ok(_) => Ok::<(), anyhow::Error>(()),
             Err(e) => match e {
-                SmithySdkError::ServiceError(ref context) => match context.err() {
+                SdkError::ServiceError(ref context) => match context.err() {
                     CreateBucketError::BucketAlreadyOwnedByYou(_) => Ok::<(), anyhow::Error>(()),
                     _ => Err(anyhow::Error::from(e)),
                 },
