@@ -3,4 +3,4 @@ use aws_smithy_http::result::SdkError;
 use http::Response;
 
 /// Convenience wrapper to handle http response
-pub type DefaultSdkError<E> = SdkError<E, Response<SdkBody>>;
+pub(crate) type DefaultSdkError<E> = SdkError<E, Response<SdkBody>>;
