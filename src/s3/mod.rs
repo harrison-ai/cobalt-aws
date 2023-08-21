@@ -6,7 +6,6 @@ use aws_sdk_s3::{
     operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
     types::Object,
 };
-use aws_smithy_http::result::SdkError;
 use aws_types::SdkConfig;
 use core::fmt::Debug;
 use futures::stream;
@@ -14,6 +13,7 @@ use futures::stream::Stream;
 use futures::{AsyncBufRead, TryStreamExt};
 
 use crate::localstack;
+use crate::types::SdkError;
 
 /// Re-export of [aws_sdk_s3::client::Client](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/client/struct.Client.html).
 ///
@@ -167,6 +167,7 @@ mod test {
         types::{BucketLocationConstraint, CreateBucketConfiguration},
         Client,
     };
+    use aws_smithy_http::result::SdkError;
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
     use rand::SeedableRng;

@@ -2,7 +2,6 @@ use aws_sdk_s3::{
     operation::put_object::{PutObjectError, PutObjectOutput},
     types::ObjectCannedAcl,
 };
-use aws_smithy_http::result::SdkError;
 use futures::io::{Error, ErrorKind};
 use futures::task::{Context, Poll};
 use futures::{ready, AsyncWrite, Future};
@@ -10,6 +9,7 @@ use std::mem;
 use std::pin::Pin;
 
 use crate::s3::Client;
+use crate::types::SdkError;
 
 // Tracks the state of the AsyncWrite lifecycle for an AsyncPutObject.
 enum PutObjectState<'a> {

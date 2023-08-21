@@ -9,7 +9,7 @@ use aws_sdk_s3::{
     types::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part},
     Client,
 };
-use aws_smithy_http::{byte_stream::ByteStream, result::SdkError};
+use aws_smithy_http::byte_stream::ByteStream;
 use bytesize::{GIB, MIB};
 use derivative::Derivative;
 use futures::future::BoxFuture;
@@ -21,6 +21,7 @@ use std::pin::Pin;
 use tracing::{event, instrument, Level};
 
 use crate::s3::S3Object;
+use crate::types::SdkError;
 
 /// Convenience wrapper for boxed future
 type MultipartUploadFuture<'a> =
