@@ -28,7 +28,7 @@ aws-types = "0.56.0"
 aws_lambda_events = { version = "0.10.0", default-features=false, features = ["sqs"]}
 lambda_runtime = "0.8.1"
 bytesize = "1.2.0"
-clap = { version = "4.3.17", features = ["derive", "env"] }
+clap = { version = "4.4.13", features = ["derive", "env"] }
 derivative = "2.2.0"
 futures = "0.3.28"
 http = "0.2.9"
