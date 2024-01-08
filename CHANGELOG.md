@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.12.0
+
+ - Upgrades from Docker Compose V1 to Docker Compose V2 for developer tooling.
+ - Updates dependencies, excluding the AWS SDK, to their latest version. The AWS SDK update has a lot of breaking changes.
+ - Fixes a bug with `make test-examples` where destroying the previous localstack container wasn't removing the named volumes. This resulted in subsequent re-runs to error, as the queue being created already existed.
+ - Changes dependency versions to `major.minor` instead of `major.minor.build`, as the package is a library and we should let downstream packages select their desired build versions.
+
 ## 0.11.1
 
  - Fixed `run_local_handler` to support message handlers with return types other than `()`.
@@ -35,8 +42,6 @@ impl LambdaContext<Env, SqsEvent> for Context {
     - `aws-types = "0.55.3"`
     - `aws_lambda_events = "0.10.0"`
     - `lambda_runtime = "0.8.1"`
-
-
 
 ## 0.10.0
 

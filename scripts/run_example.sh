@@ -9,12 +9,12 @@ export ENV="GREETING=hello"
 # Specify the message to send to the lambda
 export MESSAGE="{\"target\": \"world\"}"
 
-DCRUN="docker-compose run --rm"
+DCRUN="docker compose run --rm"
 AWSLOCAL="$DCRUN awslocal"
 
 # Restart the localstack daemon, to clear state.
-docker-compose down
-docker-compose up -d localstack
+docker compose down --volumes
+docker compose up -d localstack
 
 # TODO: cleanly wait for localstack to come up
 sleep 5
