@@ -1,6 +1,6 @@
 
 UID = $(shell id -u)
-DCRUN = docker-compose run --rm --user $(UID)
+DCRUN = docker compose run --rm --user $(UID)
 
 .DEFAULT_GOAL := help
 
