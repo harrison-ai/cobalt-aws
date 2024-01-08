@@ -1,6 +1,6 @@
 set -e
 
-DCRUN="docker-compose run --rm"
+DCRUN="docker compose run --rm"
 AWSLOCAL="$DCRUN awslocal"
 
 export EXAMPLE=hello_lambda
