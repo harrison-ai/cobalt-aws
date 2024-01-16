@@ -1,4 +1,4 @@
-set -e
+set -ex
 
 DCRUN="docker compose run --rm"
 AWSLOCAL="$DCRUN awslocal"
@@ -8,11 +8,22 @@ export DEFAULT_REGION=ap-southeast-2
 export EXPECTED_MESSAGE="hello, world!"
 
 # Read the logs
+export GROUP_NAME="/aws/lambda/${EXAMPLE}"
 
-export GROUP_NAME=`$AWSLOCAL logs describe-log-groups | jq -r '.logGroups[0].logGroupName'`
-if [ -z "$GROUP_NAME" ] || [ "$GROUP_NAME" = "null" ]; then
-    echo "Failed to determine group name"
-    exit 1
+if ! timeout 60 bash -c '
+count=0
+while true; do 
+    if '"${AWSLOCAL}"' logs describe-log-groups --log-group-name-prefix "'${GROUP_NAME}'" | grep -q "'${GROUP_NAME}'"; then
+        exit 0
+    fi
+    sleep 1
+    ((count++))
+    if ((count % 1 == 0)); then
+        echo "Still waiting for log group '"${GROUP_NAME}"' to appear..."
+    fi
+done
+'; then
+    echo "Error: Timed out waiting for log group ${GROUP_NAME} to appear."
 fi
 
 export STREAM_NAME=`$AWSLOCAL logs describe-log-streams --log-group-name $GROUP_NAME | jq -r '.logStreams[].logStreamName'`

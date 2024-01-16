@@ -301,7 +301,7 @@ where
     // for future work). To work around this, we capture any errors during this phase
     // and pass them into the handler function itself, so that it can raise the error
     // when the function is invoked.
-    let init_result = (|| async {
+    let init_result = async {
         // Setup tracing
         tracing_subscriber::fmt()
             .with_env_filter(
@@ -322,7 +322,7 @@ where
         tracing::info!("Env: {:?}", env);
         tracing::info!("Context: {:?}", ctx);
         Ok::<_, anyhow::Error>(ctx)
-    })()
+    }
     .await;
 
     lambda_runtime::run(service_fn(|event: LambdaEvent<EventType>| async {

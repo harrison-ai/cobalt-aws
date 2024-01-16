@@ -1,6 +1,12 @@
 //! Provides ways of interacting with objects in S3.
 
+// Standard library imports
+use std::mem;
+use std::pin::Pin;
+
+// External crates
 use anyhow::Context as _;
+use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::{
     operation::{
         complete_multipart_upload::{CompleteMultipartUploadError, CompleteMultipartUploadOutput},
@@ -9,17 +15,17 @@ use aws_sdk_s3::{
     types::{CompletedMultipartUpload, CompletedPart, ObjectCannedAcl, Part},
     Client,
 };
-use aws_smithy_http::byte_stream::ByteStream;
 use bytesize::{GIB, MIB};
 use derivative::Derivative;
-use futures::future::BoxFuture;
-use futures::io::{Error, ErrorKind};
-use futures::task::{Context, Poll};
-use futures::{AsyncWrite, Future, FutureExt, StreamExt, TryFutureExt};
-use std::mem;
-use std::pin::Pin;
+use futures::{
+    future::BoxFuture,
+    io::{Error, ErrorKind},
+    task::{Context, Poll},
+    AsyncWrite, Future, FutureExt, TryFutureExt,
+};
 use tracing::{event, instrument, Level};
 
+// Internal project imports
 use crate::s3::S3Object;
 use crate::types::SdkError;
 
@@ -206,9 +212,9 @@ impl<'a> AsyncMultipartUpload<'a> {
         // Any use of the items from that method results in a Future that never resolves, causing the program to hang indefinitely
         // So instead, we use this pagination method which is still alright!
         while let Some(Ok(page)) = list_parts_result.next().await {
-            parts.append(&mut page.parts().unwrap_or_default().to_vec());
+            parts.append(&mut page.parts().to_vec());
 
-            if !page.is_truncated() {
+            if !page.is_truncated().unwrap_or(false) {
                 break;
             }
         }
@@ -225,18 +231,25 @@ impl<'a> AsyncMultipartUpload<'a> {
                 let checksum_sha1 = part.checksum_sha1().map(|s| s.to_string());
                 let checksum_sha256 = part.checksum_sha256().map(|s| s.to_string());
 
-                CompletedPart::builder()
-                    .set_e_tag(e_tag)
-                    .set_checksum_crc32(checksum_crc32)
-                    .set_checksum_crc32_c(checksum_crc32_c)
-                    .set_checksum_sha1(checksum_sha1)
-                    .set_checksum_sha256(checksum_sha256)
-                    .part_number(part.part_number())
-                    .build()
+                Ok::<CompletedPart, anyhow::Error>(
+                    CompletedPart::builder()
+                        .set_e_tag(e_tag)
+                        .set_checksum_crc32(checksum_crc32)
+                        .set_checksum_crc32_c(checksum_crc32_c)
+                        .set_checksum_sha1(checksum_sha1)
+                        .set_checksum_sha256(checksum_sha256)
+                        .part_number(part.part_number().context("Expected part number")?)
+                        .build(),
+                )
             })
-            .collect();
+            .collect::<anyhow::Result<Vec<_>>>()?;
 
-        let latest_part_number = parts.iter().map(|p| p.part_number()).max().unwrap_or(0) + 1;
+        let latest_part_number = parts
+            .iter()
+            .filter_map(|p| p.part_number())
+            .max()
+            .unwrap_or(0)
+            + 1;
 
         Ok(AsyncMultipartUpload {
             client,

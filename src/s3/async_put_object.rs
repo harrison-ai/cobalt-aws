@@ -1,13 +1,20 @@
+// Standard library imports
+use std::mem;
+use std::pin::Pin;
+
+// External crates
 use aws_sdk_s3::{
     operation::put_object::{PutObjectError, PutObjectOutput},
     types::ObjectCannedAcl,
 };
-use futures::io::{Error, ErrorKind};
-use futures::task::{Context, Poll};
-use futures::{ready, AsyncWrite, Future};
-use std::mem;
-use std::pin::Pin;
+use futures::{
+    io::{Error, ErrorKind},
+    ready,
+    task::{Context, Poll},
+    AsyncWrite, Future,
+};
 
+// Internal project imports
 use crate::s3::Client;
 use crate::types::SdkError;
 
@@ -162,7 +169,6 @@ mod test_async_put_object {
             .downcast_ref::<PutObjectError>()
             .unwrap();
 
-        assert!(matches!(e, PutObjectError::Unhandled(_)));
         assert_eq!(e.code(), Some("NoSuchBucket"));
     }
 

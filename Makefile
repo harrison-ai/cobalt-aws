@@ -12,7 +12,7 @@ test:
 # Sleep for 20s in between to let CI complete execution
 test-examples:
 	./scripts/run_example.sh
-	sleep 20
+	sleep 1
 	./scripts/read_and_validate_logs.sh
 
 ## fmt:          format all code using standard conventions
