@@ -2,7 +2,9 @@ version: '3.8'
 services:
 
   cargo:
-    image: ghcr.io/harrison-ai/rust:1.70-1
+    build:
+      dockerfile: rust-dev.dockerfile
+      context: .
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
@@ -13,6 +15,8 @@ services:
       - AWS_DEFAULT_REGION=ap-southeast-2
       - AWS_ACCESS_KEY_ID=placeholder
       - AWS_SECRET_ACCESS_KEY=placeholder
+        #- RUST_LOG=debug
+        #- RUST_BACKTRACE=full
     depends_on:
       localstack:
         condition: service_healthy
@@ -30,12 +34,13 @@ services:
       - AWS_DEFAULT_REGION=ap-southeast-2
       - AWS_ACCESS_KEY_ID=placeholder
       - AWS_SECRET_ACCESS_KEY=placeholder
+      - AWS_PAGER=""
     depends_on:
       - localstack
 
   localstack:
-    image: localstack/localstack:1.4.0
-    container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
+    image: localstack/localstack:3.0.2
+    container_name: "${LOCALSTACK_DOCKER_NAME-localstack-main}"
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway
       - "127.0.0.1:4510-4559:4510-4559"  # external services port range
@@ -52,7 +57,7 @@ services:
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
-      - "./scripts/init-localstack.sh:/docker-entrypoint-initaws.d/init-localstack.sh"
+      - "./scripts/init-localstack.sh:/etc/localstack/init/ready.d/init-aws.sh"
       - "./test-data:/tmp/test-data"
     healthcheck:
       test:

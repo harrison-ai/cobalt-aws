@@ -1,19 +1,28 @@
 //! A collection of wrappers around the [aws_sdk_s3](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/) crate.
 
+// Standard library imports
+use std::pin::Pin;
+use std::{fmt::Debug, io::Error};
+
+// External crates
 use anyhow::Result;
 use aws_sdk_s3::{
     config::Builder,
     operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
+    primitives::ByteStream,
     types::Object,
 };
+use aws_smithy_async::future::pagination_stream::{PaginationStream, TryFlatMap};
 use aws_types::SdkConfig;
-use core::fmt::Debug;
-use futures::stream;
-use futures::stream::Stream;
-use futures::{AsyncBufRead, TryStreamExt};
+use bytes::Bytes;
+use futures::{
+    stream::Stream,
+    task::{Context, Poll},
+    AsyncBufRead, TryStreamExt,
+};
 
-use crate::localstack;
-use crate::types::SdkError;
+// Internal project imports
+use crate::{localstack, types::SdkError};
 
 /// Re-export of [aws_sdk_s3::client::Client](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/client/struct.Client.html).
 ///
@@ -25,6 +34,70 @@ mod s3_object;
 pub use async_multipart_put_object::AsyncMultipartUpload;
 pub use async_put_object::AsyncPutObject;
 pub use s3_object::S3Object;
+
+/// `FuturesStreamCompatByteStream` is a compatibility layer struct designed to wrap
+/// `ByteStream` from the `aws_sdk_s3`. This wrapper enables the use of `ByteStream`
+/// with the `futures::Stream` trait, which is necessary for integration with libraries
+/// that rely on the futures crate, such as `cobalt-aws`.
+///
+/// # Why
+/// The `aws_sdk_s3` uses Tokio's async model and exposes streams (such as `ByteStream`)
+/// that are specific to Tokio's ecosystem. However, the `cobalt-aws` library operates
+/// on the futures crate's async model. `FuturesStreamCompatByteStream` bridges this gap,
+/// allowing `ByteStream` to be used where a `futures::Stream` is required, ensuring
+/// compatibility and interoperability between these two different async ecosystems.
+#[derive(Debug, Default)]
+struct FuturesStreamCompatByteStream(ByteStream);
+
+impl From<ByteStream> for FuturesStreamCompatByteStream {
+    fn from(value: ByteStream) -> Self {
+        FuturesStreamCompatByteStream(value)
+    }
+}
+
+impl Stream for FuturesStreamCompatByteStream {
+    type Item = Result<Bytes, Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.0)
+            .poll_next(cx)
+            .map_err(std::io::Error::other)
+    }
+}
+
+/// `FuturesPaginationStream` is a struct that wraps the `PaginationStream` from
+/// `aws_smithy_async::future::pagination_stream`, adapting it to implement the `Stream`
+/// trait from the `futures` crate.
+///
+/// # Why
+/// `PaginationStream` in `aws_smithy_async` is designed to be runtime-agnostic and
+/// does not natively implement the `futures::Stream` trait. `FuturesPaginationStream`
+/// provides this implementation, making `PaginationStream` compatible with the futures-based
+/// asynchronous model used in libraries like `cobalt-aws`.
+///
+/// This adaptation is essential in scenarios where `cobalt-aws`, which relies on the
+/// `futures` crate, needs to work with the AWS SDK's pagination streams. It bridges
+/// the gap between different async runtimes and libraries, ensuring smoother integration
+/// and functionality in Rust async applications that rely on the futures ecosystem.
+///
+struct FuturesPaginiationStream<I>(PaginationStream<I>);
+
+impl<I> From<PaginationStream<I>> for FuturesPaginiationStream<I> {
+    fn from(value: PaginationStream<I>) -> Self {
+        FuturesPaginiationStream(value)
+    }
+}
+
+impl<I> Stream for FuturesPaginiationStream<I> {
+    type Item = I;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        Pin::new(&mut self.0).poll_next(cx)
+    }
+}
 
 /// Create an S3 client with LocalStack support.
 ///
@@ -112,17 +185,8 @@ pub fn list_objects(
         .bucket(bucket)
         .set_prefix(prefix)
         .into_paginator();
-    req.send()
-        .map_ok(|list_objs| {
-            stream::iter(
-                list_objs
-                    .contents
-                    .unwrap_or_default() // An empty bucket comes back as None, rather than an empty vector
-                    .into_iter()
-                    .map(Ok),
-            )
-        })
-        .try_flatten()
+    let flatend_stream = TryFlatMap::new(req.send()).flat_map(|x| x.contents.unwrap_or_default());
+    FuturesPaginiationStream::from(flatend_stream)
 }
 
 /// Retrieve an object from S3 as an `AsyncBufRead`.
@@ -150,10 +214,9 @@ pub async fn get_object(
 ) -> Result<impl AsyncBufRead + Debug, SdkError<GetObjectError>> {
     let req = client.get_object().bucket(bucket).key(key);
     let resp = req.send().await?;
-    Ok(resp
-        .body
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-        .into_async_read())
+    Ok::<_, SdkError<GetObjectError>>(
+        FuturesStreamCompatByteStream::from(resp.body).into_async_read(),
+    )
 }
 
 #[cfg(test)]
@@ -167,7 +230,6 @@ mod test {
         types::{BucketLocationConstraint, CreateBucketConfiguration},
         Client,
     };
-    use aws_smithy_http::result::SdkError;
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
     use rand::SeedableRng;
@@ -300,9 +362,9 @@ mod test_list_objects {
             results[0].key,
             Some("some-prefix/nested-prefix/nested.txt".into())
         );
-        assert_eq!(results[0].size, 12);
+        assert_eq!(results[0].size, Some(12));
         assert_eq!(results[1].key, Some("some-prefix/prefixed.txt".into()));
-        assert_eq!(results[1].size, 14);
+        assert_eq!(results[1].size, Some(14));
     }
 
     #[tokio::test]
@@ -317,9 +379,9 @@ mod test_list_objects {
             results[0].key,
             Some("some-prefix/nested-prefix/nested.txt".into())
         );
-        assert_eq!(results[0].size, 12);
+        assert_eq!(results[0].size, Some(12));
         assert_eq!(results[1].key, Some("some-prefix/prefixed.txt".into()));
-        assert_eq!(results[1].size, 14);
+        assert_eq!(results[1].size, Some(14));
     }
 
     #[tokio::test]
@@ -338,7 +400,7 @@ mod test_list_objects {
             results[0].key,
             Some("some-prefix/nested-prefix/nested.txt".into())
         );
-        assert_eq!(results[0].size, 12);
+        assert_eq!(results[0].size, Some(12));
     }
 
     #[tokio::test]
@@ -392,33 +454,36 @@ mod test_get_object {
     #[serial]
     async fn test_non_existant_bucket() {
         let client = localstack_test_client().await;
-        let e = get_object(&client, "non-existant-bucket", "my-object")
-            .await
-            .unwrap_err();
-        let e = e
-            .source()
-            .unwrap()
-            .downcast_ref::<GetObjectError>()
-            .unwrap();
+        match get_object(&client, "non-existant-bucket", "my-object").await {
+            Ok(_) => panic!("Expected an error, but got Ok"),
+            Err(e) => {
+                let e = e
+                    .source()
+                    .unwrap()
+                    .downcast_ref::<GetObjectError>()
+                    .unwrap();
 
-        assert!(matches!(e, GetObjectError::Unhandled(_)));
-        assert_eq!(e.code(), Some("NoSuchBucket"));
+                assert_eq!(e.code(), Some("NoSuchBucket"));
+            }
+        }
     }
 
     #[tokio::test]
     #[serial]
     async fn test_non_existant_key() {
         let client = localstack_test_client().await;
-        let e = get_object(&client, "test-bucket", "non-existing-object")
-            .await
-            .unwrap_err();
-        let e = e
-            .source()
-            .unwrap()
-            .downcast_ref::<GetObjectError>()
-            .unwrap();
+        match get_object(&client, "test-bucket", "non-existing-object").await {
+            Ok(_) => panic!("Expected an error, but got Ok"),
+            Err(e) => {
+                let e = e
+                    .source()
+                    .unwrap()
+                    .downcast_ref::<GetObjectError>()
+                    .unwrap();
 
-        assert!(matches!(e, GetObjectError::NoSuchKey(_)));
+                assert!(matches!(e, GetObjectError::NoSuchKey(_)));
+            }
+        }
     }
 
     #[tokio::test]

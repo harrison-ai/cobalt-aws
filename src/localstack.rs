@@ -32,25 +32,15 @@ pub mod test_utils {
     use std::time::{Duration, Instant};
 
     #[derive(Deserialize, Debug)]
-    struct Health {
-        features: Option<Feature>,
+    struct Init {
+        completed: bool,
     }
-    #[derive(Deserialize, Debug)]
-    #[allow(non_snake_case)]
-    struct Feature {
-        initScripts: Option<String>,
-    }
-
-    /// This function polls the <localstack_url>/health endpoint and waits for the { features: initScripts } value to
-    /// be "initialized".
+    /// This function polls the <localstack_url>/_localstack/init/ready endpoint and waits for
+    /// complete to be "true".
     ///
     /// We poll at one second intervals and timeout after 1 minute.
     ///
-    /// This API doesn't seem to be publicly documented, but the code can be seen here:
-    ///
-    /// https://github.com/localstack/localstack/blob/b21178e1d62bfd784058496ac9d34d91c11bd329/bin/docker-entrypoint.sh#L54
-    ///
-    /// See also: https://github.com/localstack/localstack/pull/4770/files
+    /// This API is documented here https://docs.localstack.cloud/references/init-hooks/
     ///
     /// # Panic
     ///
@@ -68,19 +58,15 @@ pub mod test_utils {
         let uri = get_endpoint_uri().unwrap().unwrap();
         let now = Instant::now();
         loop {
-            match reqwest::get(&format!("{:?}health", uri)).await {
+            match reqwest::get(&format!("{:?}_localstack/init/ready", uri)).await {
                 Err(_) => {
                     println!("Localstack URL: {:#?}", uri);
                     panic!("Unable to connect to localstack. To run localstack locally, run `docker-compose up -d`");
                 }
                 Ok(response) => {
-                    let health: Health = response.json().await.unwrap();
-                    if let Some(features) = health.features {
-                        if let Some(s) = features.initScripts {
-                            if s == "initialized" {
-                                break;
-                            }
-                        }
+                    let init: Init = response.json().await.unwrap();
+                    if init.completed {
+                        break;
                     }
                 }
             }

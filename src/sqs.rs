@@ -117,12 +117,11 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
         .map(|msg| Ok::<_, anyhow::Error>(serde_json::to_string(&msg?)?))
         .enumerate()
         .map(|(i, s)| {
-            Ok::<_, anyhow::Error>(
-                SendMessageBatchRequestEntry::builder()
-                    .message_body(s?)
-                    .id(format!("{}", i))
-                    .build(),
-            )
+            SendMessageBatchRequestEntry::builder()
+                .message_body(s?)
+                .id(format!("{}", i))
+                .build()
+                .map_err(anyhow::Error::from)
         })
         .try_chunks(BATCH_SIZE)
         .map_err(anyhow::Error::from)
@@ -159,7 +158,7 @@ mod test {
 }
 
 #[cfg(test)]
-mod test_send_messages_concurrently {
+mod test_send_messages {
     use super::*;
     use aws_config;
     use aws_sdk_sqs::{
@@ -202,7 +201,7 @@ mod test_send_messages_concurrently {
                 Some(messages) => {
                     assert!(messages.len() <= MAX_MESSAGES);
 
-                    let results_delete = messages
+                    let results_delete: Result<Vec<_>, _> = messages
                         .into_iter()
                         .map(|msg| {
                             results.push(msg.body.unwrap().parse().unwrap());
@@ -211,7 +210,13 @@ mod test_send_messages_concurrently {
                                 .set_id(msg.message_id)
                                 .build()
                         })
-                        .collect::<Vec<_>>();
+                        .collect();
+                    let results_delete =
+                        results_delete.expect("Errors not expected building results_delete");
+
+                    if results_delete.is_empty() {
+                        break;
+                    }
 
                     client
                         .delete_message_batch()
@@ -219,7 +224,7 @@ mod test_send_messages_concurrently {
                         .set_entries(Some(results_delete))
                         .send()
                         .await
-                        .unwrap();
+                        .expect("Error deleting message batch");
                 }
                 None => break,
             }

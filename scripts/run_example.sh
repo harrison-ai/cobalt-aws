@@ -1,5 +1,7 @@
 set -e
 
+# Disable AWS CLI paging feature
+export AWS_PAGER=""
 # Choose the example to run
 export EXAMPLE=hello_lambda
 
@@ -20,7 +22,7 @@ docker compose up -d localstack
 sleep 5
 
 # Setup the queue
-export QUEUE_NAME=test-queue
+export QUEUE_NAME=example-test-queue
 $AWSLOCAL sqs create-queue --queue-name="$QUEUE_NAME" --attributes '{ "VisibilityTimeout": "240" }'
 QUEUE_URL=$($AWSLOCAL sqs list-queues | jq -r '.QueueUrls[0]')
 QUEUE_ARN=$($AWSLOCAL sqs get-queue-attributes --queue-url="$QUEUE_URL" --attribute-names QueueArn | jq -r '.Attributes.QueueArn')
@@ -34,7 +36,7 @@ cp target/x86_64-unknown-linux-musl/debug/examples/$EXAMPLE bootstrap && zip lam
 # Create a lambda function
 $AWSLOCAL lambda create-function \
    --function-name=$EXAMPLE \
-   --role=rn:aws:iam:local \
+   --role=arn:aws:iam::123456789012:role/example \
    --zip-file=fileb://lambda.zip \
    --environment "Variables={$ENV}" \
    --runtime=provided
