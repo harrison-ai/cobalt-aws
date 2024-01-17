@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.0
+
+ - aws-sdk-athena: Upgraded from 0.29 to 1.10.0.
+ - aws-config: Updated to 1.1.2 with the behavior-version-latest feature.
+ - aws-sdk-s3: Upgraded from 0.29 to 1.12.0.
+ - aws-sdk-sqs: Upgraded from 0.29 to 1.10.0.
+ - aws-types: Upgraded from 0.56 to 1.1.2.
+ - aws-smithy-async: Added 1.1.2.
+ - aws-smithy-runtime-api: Added 1.1.2.
+ - aws-smithy-http: Removed.
+
 ## 0.12.0
 
  - Upgrades from Docker Compose V1 to Docker Compose V2 for developer tooling.
