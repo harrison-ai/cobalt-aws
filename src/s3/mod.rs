@@ -230,7 +230,6 @@ mod test {
         types::{BucketLocationConstraint, CreateBucketConfiguration},
         Client,
     };
-    //use aws_smithy_http::SdkError;
     use rand::distributions::{Alphanumeric, DistString};
     use rand::Rng;
     use rand::SeedableRng;
