@@ -54,7 +54,6 @@ services:
       - LOCALSTACK_API_KEY=${LOCALSTACK_API_KEY-}  # only required for Pro
       - DOCKER_HOST=unix:///var/run/docker.sock
       - AWS_DEFAULT_REGION=ap-southeast-2
-      - DEFAULT_REGION=ap-southeast-2
     volumes:
       - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
