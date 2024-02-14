@@ -25,7 +25,7 @@ use tracing_subscriber::filter::EnvFilter;
 // We provide this re-export so that the user doesn't need to have lambda_runtime as a direct dependency.
 pub use lambda_runtime::Error;
 
-/// This struct is used to attempt to parse the `AWS_LAMBDA_FUNCTION_NAME` environement variable.
+/// This struct is used to attempt to parse the `AWS_LAMBDA_FUNCTION_NAME` environment variable.
 ///
 /// We assume that if this variable is present then we're running in a Lambda function.
 /// https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
@@ -50,7 +50,7 @@ pub fn running_on_lambda() -> Result<bool> {
 /// All `Context` types must implement the implement the [LambdaContext::from_env] method for their corresponding `Env` type
 /// in order to use the `Context` with [run_message_handler].
 ///
-/// When implementing `LambdaContext` you must also specify the `EventType` that the Lambda expects to recieve, e.g. [SqsEvent].
+/// When implementing `LambdaContext` you must also specify the `EventType` that the Lambda expects to receive, e.g. [SqsEvent].
 #[async_trait]
 pub trait LambdaContext<Env, EventType>: Sized {
     /// # Example
@@ -163,7 +163,7 @@ impl<Msg> RunnableEventType<Msg, (), ()> for SqsEvent {
         // Process the records in the event batch concurrently, up to `RECORD_CONCURRENCY`.
         // If any of them fail, return immediately.
         let handler_env: HandlerEnv = HandlerEnv::try_parse_from(empty::<OsString>())
-            .context("An error occured while parsing environment variable for handler")?;
+            .context("An error occurred while parsing environment variable for handler")?;
         stream::iter(&self.records)
             .map(|record| {
                 let body = record.body.clone();

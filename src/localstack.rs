@@ -141,7 +141,7 @@ mod test {
     fn test_get_localstack_endpoint_bad_uri() {
         let uri = safe_get_endpoint_uri(Some("bad:host".into()), Some("not-a-number".into()));
         match uri {
-            Ok(uri) => Err(format!("Expected error, recieved {:?}", uri)),
+            Ok(uri) => Err(format!("Expected error, received {:?}", uri)),
             Err(e) => {
                 assert!(e.to_string().contains("http"));
                 Ok(())
