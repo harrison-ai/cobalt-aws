@@ -26,7 +26,7 @@ aws-sdk-sqs = "1.13.0"
 aws-smithy-runtime-api = "1.1.5"
 aws-smithy-async = "1.1.5"
 aws-types = "1.1.5"
-aws_lambda_events = { version = "0.13", default-features=false, features = ["sqs"]}
+aws_lambda_events = { version = "0.14", default-features=false, features = ["sqs"]}
 bytes = "1.5.0"
 lambda_runtime = "0.9.1"
 bytesize = "1.3"
