@@ -315,10 +315,10 @@ mod test_list_objects {
 
     #[tokio::test]
     #[serial]
-    async fn test_non_existant_bucket() {
+    async fn test_non_existent_bucket() {
         let client = localstack_test_client().await;
 
-        let stream = list_objects(&client, "non-existant-bucket", None);
+        let stream = list_objects(&client, "non-existent-bucket", None);
         let e = stream.try_collect::<Vec<_>>().await.unwrap_err();
         assert!(matches!(
             e.source()
@@ -452,9 +452,9 @@ mod test_get_object {
 
     #[tokio::test]
     #[serial]
-    async fn test_non_existant_bucket() {
+    async fn test_non_existent_bucket() {
         let client = localstack_test_client().await;
-        match get_object(&client, "non-existant-bucket", "my-object").await {
+        match get_object(&client, "non-existent-bucket", "my-object").await {
             Ok(_) => panic!("Expected an error, but got Ok"),
             Err(e) => {
                 let e = e
@@ -470,7 +470,7 @@ mod test_get_object {
 
     #[tokio::test]
     #[serial]
-    async fn test_non_existant_key() {
+    async fn test_non_existent_key() {
         let client = localstack_test_client().await;
         match get_object(&client, "test-bucket", "non-existing-object").await {
             Ok(_) => panic!("Expected an error, but got Ok"),

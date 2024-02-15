@@ -158,9 +158,9 @@ mod test_async_put_object {
 
     #[tokio::test]
     #[serial]
-    async fn test_non_existant_bucket() {
+    async fn test_non_existent_bucket() {
         let client = localstack_test_client().await;
-        let mut writer = AsyncPutObject::new(&client, "non-existant-bucket", "my-object");
+        let mut writer = AsyncPutObject::new(&client, "non-existent-bucket", "my-object");
         writer.write_all(b"File contents").await.unwrap();
         let e = writer.close().await.unwrap_err();
         let e = e

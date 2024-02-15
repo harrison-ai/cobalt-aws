@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - aws-smithy-runtime-api: Added 1.1.2.
  - aws-smithy-http: Removed.
  - Upgraded localstack to 3.0.2
- - Fixed intergration tests
+ - Fixed integration tests
 
 ## 0.12.0
 
