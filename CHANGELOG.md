@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+
+## 0.13.2
+
+ - aws-config: Upgraded from 1.1.5 to 1.1.6.
+ - aws-sdk-athena: Upgraded from 1.14.0 to 1.15.0.
+ - aws-sdk-s3: Upgraded from 1.15.0 to 1.16.0.
+ - aws-sdk-sqs: Upgraded from 1.13.0 to 1.14.0.
+ - aws-smithy-async: Upgraded from 1.1.5 to 1.1.7.
+ - aws-smithy-runtime-api: Upgraded from 1.1.5 to 1.1.7.
+ - aws-types: Upgraded from 1.1.5 to 1.1.6.
+ - aws_lambda_events: Upgraded from 0.14 to 0.15.
+ - lambda_runtime: Upgraded from 0.9.2 to 0.10.0.
+
 ## 0.13.1
 
  - aws-sdk-athena: Upgraded from 1.10.0 1.14.0
