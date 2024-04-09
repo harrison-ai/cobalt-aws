@@ -1,4 +1,4 @@
-FROM ghcr.io/harrison-ai/rust:1.75-1.0
+FROM ghcr.io/harrison-ai/rust:1.77-1.0
 
 # cargo deny version 0.14.3 in the rust base layer fails on cargo deny check with:
 # failed to fetch advisory database https://github.com/RustSec/advisory-db: An IO error occurred when talking to the server: error sending request for url (https://github.com/RustSec/advisory-db/info/refs?service=git-upload-pack): error trying to connect: invalid URL, scheme is not http
