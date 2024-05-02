@@ -4,8 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.13.3
 
+ - aws-config: Upgraded from 1.1.6 to 1.3.0.
+ - aws-sdk-athena: Upgraded from 1.15.0 to 1.23.0.
+ - aws-sdk-s3: Upgraded from 1.16.0 to 1.25.0.
+ - aws-sdk-sqs: Upgraded from 1.14.0 to 1.22.0.
+ - aws-smithy-async: Upgraded from 1.1.7 to 1.2.1.
+ - aws-smithy-runtime-api: Upgraded from 1.1.7 to 1.5.0.
+ - aws-types: Upgraded from 1.1.6 to 1.2.0.
+ - bytes: Upgraded from 1.5.0 to 1.6.0.
+ - http: Upgraded from 1.0 to 1.1.
+ - lambda_runtime: Upgraded from 0.10.0 to 0.11.1
+ - tokio: Upgraded from 1.36 to 1.37.
 
 ## 0.13.2
 
