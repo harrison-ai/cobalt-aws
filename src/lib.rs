@@ -19,11 +19,16 @@
 
 // Public modules
 
+#[cfg(feature = "athena")]
 pub mod athena;
 pub mod config;
+#[cfg(feature = "lambda")]
 pub mod lambda;
+#[cfg(feature = "s3")]
 pub mod s3;
+#[cfg(feature = "sqs")]
 pub mod sqs;
+#[cfg(feature = "s3")]
 pub mod types;
 // Internal shared modules
 mod localstack;
