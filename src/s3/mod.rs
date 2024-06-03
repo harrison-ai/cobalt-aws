@@ -141,12 +141,13 @@ pub fn list_objects(
 ///
 /// ```no_run
 /// use aws_config;
-/// use cobalt_aws::s3::{get_client, get_object};
+/// use cobalt_aws::s3::{Client, get_object};
+/// use cobalt_aws::config::load_from_env;
 /// use futures::AsyncReadExt;
 ///
 /// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
+/// let shared_config = load_from_env().await.unwrap();
+/// let client = Client::new(&shared_config);
 /// let mut reader = get_object(&client, "my-bucket", "my-key").await.unwrap();
 /// let mut buffer = String::new();
 /// reader.read_to_string(&mut buffer).await.unwrap();
@@ -235,8 +236,7 @@ mod test {
 #[cfg(test)]
 mod test_list_objects {
     use super::*;
-    use crate::localstack::test_utils;
-    use aws_config;
+    use crate::{config::load_from_env, localstack::test_utils};
     use futures::TryStreamExt;
     use serial_test::serial;
     use std::error::Error;
@@ -244,7 +244,7 @@ mod test_list_objects {
 
     async fn localstack_test_client() -> Client {
         test_utils::wait_for_localstack().await;
-        let shared_config = aws_config::load_from_env().await;
+        let shared_config = load_from_env().await.unwrap();
         aws_sdk_s3::Client::new(&shared_config)
     }
 
@@ -371,8 +371,7 @@ mod test_list_objects {
 #[cfg(test)]
 mod test_get_object {
     use super::*;
-    use crate::localstack::test_utils;
-    use aws_config;
+    use crate::{config::load_from_env, localstack::test_utils};
     use aws_sdk_s3::error::ProvideErrorMetadata;
     use futures::AsyncReadExt;
     use serial_test::serial;
@@ -381,7 +380,7 @@ mod test_get_object {
 
     async fn localstack_test_client() -> Client {
         test_utils::wait_for_localstack().await;
-        let shared_config = aws_config::load_from_env().await;
+        let shared_config = load_from_env().await.unwrap();
         aws_sdk_s3::Client::new(&shared_config)
     }
 

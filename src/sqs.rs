@@ -87,10 +87,9 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
 
 #[cfg(test)]
 mod test_send_messages {
-    use crate::localstack;
+    use crate::{config::load_from_env, localstack};
 
     use super::*;
-    use aws_config;
     use aws_sdk_sqs::{
         error::ProvideErrorMetadata, operation::get_queue_url::GetQueueUrlError,
         types::DeleteMessageBatchRequestEntry,
@@ -103,7 +102,7 @@ mod test_send_messages {
 
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
-        let shared_config = aws_config::load_from_env().await;
+        let shared_config = load_from_env().await.unwrap();
         aws_sdk_sqs::Client::new(&shared_config)
     }
 
