@@ -7,13 +7,11 @@ use std::{fmt::Debug, io::Error};
 // External crates
 use anyhow::Result;
 use aws_sdk_s3::{
-    config::Builder,
     operation::{get_object::GetObjectError, list_objects_v2::ListObjectsV2Error},
     primitives::ByteStream,
     types::Object,
 };
 use aws_smithy_async::future::pagination_stream::{PaginationStream, TryFlatMap};
-use aws_types::SdkConfig;
 use bytes::Bytes;
 use futures::{
     stream::Stream,
@@ -22,7 +20,7 @@ use futures::{
 };
 
 // Internal project imports
-use crate::{localstack, types::SdkError};
+use crate::types::SdkError;
 
 /// Re-export of [aws_sdk_s3::client::Client](https://docs.rs/aws-sdk-s3/latest/aws_sdk_s3/client/struct.Client.html).
 ///
@@ -97,58 +95,6 @@ impl<I> Stream for FuturesPaginiationStream<I> {
     ) -> std::task::Poll<Option<Self::Item>> {
         Pin::new(&mut self.0).poll_next(cx)
     }
-}
-
-/// Create an S3 client with LocalStack support.
-///
-/// # Example
-///
-/// ```
-/// use aws_config;
-/// use cobalt_aws::s3::get_client;
-///
-/// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
-/// # })
-/// ```
-///
-/// ## LocalStack
-///
-/// This client supports running on [LocalStack](https://localstack.cloud/).
-///
-/// If you're using this client from within a Lambda function that is running on
-/// LocalStack, it will automatically setup the correct endpoint.
-///
-/// If you're using this client from outside of LocalStack but want to communicate
-/// with a LocalStack instance, then set the environment variable `LOCALSTACK_HOSTNAME`:
-///
-/// ```shell
-/// $ export LOCALSTACK_HOSTNAME=localhost
-/// ```
-///
-/// You can also optionally set the `EDGE_PORT` variable if you need something other
-/// than the default of `4566`.
-///
-/// See the [LocalStack configuration docs](https://docs.localstack.cloud/localstack/configuration/) for more info.
-///
-/// ## Errors
-///
-/// An error will be returned if `LOCALSTACK_HOSTNAME` is set and a valid URI cannot be constructed.
-///
-#[deprecated(
-    since = "0.5.0",
-    note = r#"
-To create a `Client` with LocalStack support use `cobalt_aws::config::load_from_env()` to create a `SdkConfig` with LocalStack support.
-Then `aws_sdk_s3::Client::new(&shared_config)` to create the `Client`.
-"#
-)]
-pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
-    let mut builder = Builder::from(shared_config);
-    if let Some(uri) = localstack::get_endpoint_uri()? {
-        builder = builder.endpoint_url(uri.to_string()).force_path_style(true);
-    }
-    Ok(Client::from_conf(builder.build()))
 }
 
 /// Perform a bucket listing, returning a stream of results.
@@ -243,8 +189,7 @@ mod test {
     #[serial]
     async fn test_get_client() {
         let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap();
+        aws_sdk_s3::Client::new(&shared_config)
     }
 
     pub async fn create_bucket(client: &Client, bucket: &str) -> Result<()> {
@@ -309,8 +254,7 @@ mod test_list_objects {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap()
+        aws_sdk_s3::Client::new(&shared_config)
     }
 
     #[tokio::test]
@@ -446,8 +390,7 @@ mod test_get_object {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap()
+        aws_sdk_s3::Client::new(&shared_config)
     }
 
     #[tokio::test]

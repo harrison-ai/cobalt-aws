@@ -569,8 +569,6 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
 mod tests {
     use super::*;
     use crate::localstack;
-    #[allow(deprecated)]
-    use crate::s3::get_client;
     use crate::s3::test::*;
     use crate::s3::{AsyncMultipartUpload, S3Object};
     use ::function_name::named;
@@ -620,8 +618,7 @@ mod tests {
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap()
+        aws_sdk_s3::Client::new(&shared_config)
     }
 
     #[tokio::test]
