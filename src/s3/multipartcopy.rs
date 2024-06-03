@@ -627,13 +627,10 @@ mod tests {
 
     use super::*;
     use crate::localstack;
-    #[allow(deprecated)]
-    use crate::s3::get_client;
     use crate::s3::test::*;
     use crate::s3::{AsyncMultipartUpload, S3Object};
     use ::function_name::named;
     use anyhow::Result;
-    use aws_config;
     use aws_sdk_s3::Client;
     use bytesize::MIB;
     use futures::prelude::*;
@@ -653,9 +650,11 @@ mod tests {
     //localstack which makes it hard to migrate away from this structure.
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
-        let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap()
+        let shared_config = crate::config::load_from_env().await.unwrap();
+        let builder = aws_sdk_s3::config::Builder::from(&shared_config)
+            .force_path_style(true)
+            .build();
+        Client::from_conf(builder)
     }
 
     #[proptest(async = "tokio", cases = 3)]

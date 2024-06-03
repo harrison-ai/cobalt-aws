@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check formatting and other validation
-        run: make validate
+        run: sudo make validate
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Run the test suite
-        run: make test
+        run: sudo make test

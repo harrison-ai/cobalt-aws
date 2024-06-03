@@ -1,67 +1,12 @@
 //! A collection of wrappers around the [aws_sdk_sqs](https://docs.rs/aws-sdk-sqs/latest/aws_sdk_sqs/) crate.
 
 use anyhow::Result;
-use aws_sdk_sqs::{config::Builder, types::SendMessageBatchRequestEntry};
-use aws_types::SdkConfig;
+use aws_sdk_sqs::types::SendMessageBatchRequestEntry;
 use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
-
-use crate::localstack;
 
 /// Re-export of [aws_sdk_sqs::client::Client](https://docs.rs/aws-sdk-sqs/latest/aws_sdk_sqs/client/struct.Client.html).
 ///
 pub use aws_sdk_sqs::Client;
-
-/// Create an SQS client with LocalStack support.
-///
-/// # Example
-///
-/// ```
-/// use aws_config;
-/// use cobalt_aws::sqs::get_client;
-///
-/// # tokio_test::block_on(async {
-/// let shared_config = aws_config::load_from_env().await;
-/// let client = get_client(&shared_config).unwrap();
-/// # })
-/// ```
-///
-/// ## LocalStack
-///
-/// This client supports running on [LocalStack](https://localstack.cloud/).
-///
-/// If you're using this client from within a Lambda function that is running on
-/// LocalStack, it will automatically setup the correct endpoint.
-///
-/// If you're using this client from outside of LocalStack but want to communicate
-/// with a LocalStack instance, then set the environment variable `LOCALSTACK_HOSTNAME`:
-///
-/// ```shell
-/// $ export LOCALSTACK_HOSTNAME=localhost
-/// ```
-///
-/// You can also optionally set the `EDGE_PORT` variable if you need something other
-/// than the default of `4566`.
-///
-/// See the [LocalStack configuration docs](https://docs.localstack.cloud/localstack/configuration/) for more info.
-///
-/// ## Errors
-///
-/// An error will be returned if `LOCALSTACK_HOSTNAME` is set and a valid URI cannot be constructed.
-///
-#[deprecated(
-    since = "0.5.0",
-    note = r#"
-To create a `Client` with LocalStack support use `aws_cobalt::config::load_from_env()` to create a `SdkConfig` with LocalStack support.
-Then `aws_sdk_sqs::Client::new(&shared_config)` to create the `Client`.
-"#
-)]
-pub fn get_client(shared_config: &SdkConfig) -> Result<Client> {
-    let mut builder = Builder::from(shared_config);
-    if let Some(uri) = localstack::get_endpoint_uri()? {
-        builder = builder.endpoint_url(uri.to_string());
-    }
-    Ok(Client::from_conf(builder.build()))
-}
 
 const BATCH_SIZE: usize = 10;
 
@@ -141,26 +86,10 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
 }
 
 #[cfg(test)]
-mod test {
-    use super::*;
-
-    use aws_config;
-    use serial_test::serial;
-    use tokio;
-
-    #[tokio::test]
-    #[serial]
-    async fn test_get_client() {
-        let config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&config).unwrap();
-    }
-}
-
-#[cfg(test)]
 mod test_send_messages {
+    use crate::{config::load_from_env, localstack};
+
     use super::*;
-    use aws_config;
     use aws_sdk_sqs::{
         error::ProvideErrorMetadata, operation::get_queue_url::GetQueueUrlError,
         types::DeleteMessageBatchRequestEntry,
@@ -173,9 +102,8 @@ mod test_send_messages {
 
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
-        let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap()
+        let shared_config = load_from_env().await.unwrap();
+        aws_sdk_sqs::Client::new(&shared_config)
     }
 
     async fn consume_queue(client: &Client, queue_name: &str) -> Vec<usize> {

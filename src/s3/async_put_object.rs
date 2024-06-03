@@ -140,9 +140,6 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
 mod test_async_put_object {
     use super::*;
     use crate::localstack;
-    #[allow(deprecated)]
-    use crate::s3::get_client;
-    use aws_config;
     use aws_sdk_s3::error::ProvideErrorMetadata;
     use futures::{AsyncReadExt, AsyncWriteExt};
     use serial_test::serial;
@@ -151,9 +148,11 @@ mod test_async_put_object {
 
     async fn localstack_test_client() -> Client {
         localstack::test_utils::wait_for_localstack().await;
-        let shared_config = aws_config::load_from_env().await;
-        #[allow(deprecated)]
-        get_client(&shared_config).unwrap()
+        let shared_config = crate::config::load_from_env().await.unwrap();
+        let builder = aws_sdk_s3::config::Builder::from(&shared_config)
+            .force_path_style(true)
+            .build();
+        Client::from_conf(builder)
     }
 
     #[tokio::test]
