@@ -170,7 +170,6 @@ mod test {
     use super::*;
     use crate::s3::S3Object;
     use anyhow::Result;
-    use aws_config;
     use aws_sdk_s3::{
         operation::create_bucket::CreateBucketError,
         types::{BucketLocationConstraint, CreateBucketConfiguration},
@@ -180,17 +179,8 @@ mod test {
     use rand::Rng;
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
-    use serial_test::serial;
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    use tokio;
-
-    #[tokio::test]
-    #[serial]
-    async fn test_get_client() {
-        let shared_config = aws_config::load_from_env().await;
-        aws_sdk_s3::Client::new(&shared_config)
-    }
 
     pub async fn create_bucket(client: &Client, bucket: &str) -> Result<()> {
         let constraint = CreateBucketConfiguration::builder()
@@ -245,6 +235,7 @@ mod test {
 #[cfg(test)]
 mod test_list_objects {
     use super::*;
+    use crate::localstack::test_utils;
     use aws_config;
     use futures::TryStreamExt;
     use serial_test::serial;
@@ -252,7 +243,7 @@ mod test_list_objects {
     use tokio;
 
     async fn localstack_test_client() -> Client {
-        localstack::test_utils::wait_for_localstack().await;
+        test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
         aws_sdk_s3::Client::new(&shared_config)
     }
@@ -380,6 +371,7 @@ mod test_list_objects {
 #[cfg(test)]
 mod test_get_object {
     use super::*;
+    use crate::localstack::test_utils;
     use aws_config;
     use aws_sdk_s3::error::ProvideErrorMetadata;
     use futures::AsyncReadExt;
@@ -388,7 +380,7 @@ mod test_get_object {
     use tokio;
 
     async fn localstack_test_client() -> Client {
-        localstack::test_utils::wait_for_localstack().await;
+        test_utils::wait_for_localstack().await;
         let shared_config = aws_config::load_from_env().await;
         aws_sdk_s3::Client::new(&shared_config)
     }
