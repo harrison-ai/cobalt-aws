@@ -30,9 +30,11 @@ pub use aws_sdk_s3::Client;
 
 mod async_multipart_put_object;
 mod async_put_object;
+mod multipartcopy;
 mod s3_object;
 pub use async_multipart_put_object::AsyncMultipartUpload;
 pub use async_put_object::AsyncPutObject;
+pub use multipartcopy::{PartSize, S3MultipartCopier, S3MultipartCopierError};
 pub use s3_object::S3Object;
 
 /// `FuturesStreamCompatByteStream` is a compatibility layer struct designed to wrap

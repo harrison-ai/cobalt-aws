@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 0.13.4
 
  - Added feature flags `"s3", "sqs", "athena", "lambda"`. By default, all features are enabled, so no breaking change.
+ - Added MultipartCopy to allow copy of files larger than 5GB.
 
 ## 0.13.3
 
