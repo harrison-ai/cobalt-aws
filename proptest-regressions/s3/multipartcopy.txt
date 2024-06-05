@@ -1,0 +1,10 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 71f24b033b3e7c3dce10c3a0308243ead2049b247a2031e735effe5c60928976 # shrinks to input = _TestPartCountArgs { source_size: 1, part_size: 9007199254740993 }
+cc ce8fa5c461e794c4f2e4926087fa42d703c2cd6d98905320492a4e1d6c518928 # shrinks to input = _TestPartCountLargeValuesArgs { source_size: 4611686018427387903, part_size: 1 }
+cc b0dec3e6e5f7a74caa04b85084640c8989c646588cdda586f7b8e43404d5d127 # shrinks to input = _TestValidByteRangeArgs { part_number: 5, part_size: PartSize(3956993702), source_size: SourceSize(0) }
+cc 70207a2f433c11b58aa1d44f118c5972e28ebf0ea022c17c007162834fc482fb # shrinks to input = _TestPartCountSmallSourceArgs { part_size: PartSize(5242880), source: 0 }
