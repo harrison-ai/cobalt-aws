@@ -267,7 +267,7 @@ pub enum S3MultipartCopierError {
     #[error(transparent)]
     SourceSize(#[from] SourceSizeError),
     #[error("PartSize larger than SourceSize \n Atomic copy should be use. part_size : {part_size}, source_size : {source_size}")]
-    PartSizeGreaterThanSource { part_size: i64, source_size: i64 },
+    PartSizeGreaterThanOrEqaulSource { part_size: i64, source_size: i64 },
     #[error("Can not perform multipart copy with source size 0")]
     MultipartCopySourceSizeZero,
     #[error(transparent)]
@@ -463,8 +463,10 @@ impl S3MultipartCopier {
             part_size = self.part_size.as_ref(),
         );
 
-        if source_size.as_ref() <= self.part_size.as_ref() {
-            tracing::info!("Source size is smaller than part size, using atomic copy");
+        //If part size is larger than or equal to source size
+        //a atomic copy is faster and cheaper.
+        if self.part_size.as_ref() >= source_size.as_ref() {
+            tracing::info!("Part size is greater than or equal to source size, using atomic copy");
             self.atomic_copy().await
         } else {
             tracing::info!("Source size is larger than part size, using multipart copy");
@@ -486,7 +488,7 @@ impl S3MultipartCopier {
 
     async fn multipart_copy(&self, source_size: &SourceSize) -> Result<(), S3MultipartCopierError> {
         if self.part_size.as_ref() > source_size.as_ref() {
-            return Err(S3MultipartCopierError::PartSizeGreaterThanSource {
+            return Err(S3MultipartCopierError::PartSizeGreaterThanOrEqaulSource {
                 part_size: *self.part_size.as_ref(),
                 source_size: *source_size.as_ref(),
             });
