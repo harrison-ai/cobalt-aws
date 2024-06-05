@@ -267,7 +267,7 @@ pub enum S3MultipartCopierError {
     #[error(transparent)]
     SourceSize(#[from] SourceSizeError),
     #[error("PartSize larger than SourceSize \n Atomic copy should be use. part_size : {part_size}, source_size : {source_size}")]
-    PartSizeGreaterThanOrEqaulSource { part_size: i64, source_size: i64 },
+    PartSizeGreaterThanOrEqualSource { part_size: i64, source_size: i64 },
     #[error("Can not perform multipart copy with source size 0")]
     MultipartCopySourceSizeZero,
     #[error(transparent)]
@@ -488,7 +488,7 @@ impl S3MultipartCopier {
 
     async fn multipart_copy(&self, source_size: &SourceSize) -> Result<(), S3MultipartCopierError> {
         if self.part_size.as_ref() > source_size.as_ref() {
-            return Err(S3MultipartCopierError::PartSizeGreaterThanOrEqaulSource {
+            return Err(S3MultipartCopierError::PartSizeGreaterThanOrEqualSource {
                 part_size: *self.part_size.as_ref(),
                 source_size: *source_size.as_ref(),
             });
