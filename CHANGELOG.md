@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.13.5
+
+ - Changed return type of `s3::get_object` to `Result<S3AsyncBufReader, SdkError<GetObjectError>>`, where `S3AsyncBufReader` implements `AsyncBufRead`.
+ Returning a concrete type here allows the returned value to be used in context where an existential type is not appropriate.
+
 ## 0.13.4
 
  - Added feature flags `"s3", "sqs", "athena", "lambda"`. By default, all features are enabled, so no breaking change.
