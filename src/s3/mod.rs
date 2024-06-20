@@ -16,9 +16,9 @@ use aws_smithy_async::future::pagination_stream::{PaginationStream, TryFlatMap};
 use aws_types::SdkConfig;
 use bytes::Bytes;
 use futures::{
-    stream::Stream,
+    stream::{IntoAsyncRead, Stream},
     task::{Context, Poll},
-    AsyncBufRead, TryStreamExt,
+    TryStreamExt,
 };
 
 // Internal project imports
@@ -49,7 +49,7 @@ pub use s3_object::S3Object;
 /// allowing `ByteStream` to be used where a `futures::Stream` is required, ensuring
 /// compatibility and interoperability between these two different async ecosystems.
 #[derive(Debug, Default)]
-struct FuturesStreamCompatByteStream(ByteStream);
+pub struct FuturesStreamCompatByteStream(ByteStream);
 
 impl From<ByteStream> for FuturesStreamCompatByteStream {
     fn from(value: ByteStream) -> Self {
@@ -191,6 +191,9 @@ pub fn list_objects(
     FuturesPaginiationStream::from(flatend_stream)
 }
 
+/// An `AsyncBufRead` compatible reader over an S3 object byte stream.
+pub type S3AsyncBufReader = IntoAsyncRead<FuturesStreamCompatByteStream>;
+
 /// Retrieve an object from S3 as an `AsyncBufRead`.
 ///
 /// # Example
@@ -213,12 +216,10 @@ pub async fn get_object(
     client: &Client,
     bucket: &str,
     key: &str,
-) -> Result<impl AsyncBufRead + Debug, SdkError<GetObjectError>> {
+) -> Result<S3AsyncBufReader, SdkError<GetObjectError>> {
     let req = client.get_object().bucket(bucket).key(key);
     let resp = req.send().await?;
-    Ok::<_, SdkError<GetObjectError>>(
-        FuturesStreamCompatByteStream::from(resp.body).into_async_read(),
-    )
+    Ok(FuturesStreamCompatByteStream::from(resp.body).into_async_read())
 }
 
 #[cfg(test)]
