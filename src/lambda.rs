@@ -332,7 +332,7 @@ where
             Ok(x) => x,
             Err(e) => {
                 tracing::error!("{:?}", e);
-                return Err(anyhow::anyhow!("Failed to initialise lambda."));
+                return Err(Error::from("Failed to initialise lambda."));
             }
         };
 
@@ -343,10 +343,10 @@ where
         // Log out the full error, as the lambda_runtime only logs the first line of the error
         // message, which can hide crucial information.
         match result {
-            Ok(_) => result,
+            Ok(x) => Ok(x),
             Err(e) => {
                 tracing::error!("{:?}", e);
-                Err(anyhow::anyhow!("Failed to process SQS event."))
+                Err(Error::from("Failed to process SQS event."))
             }
         }
     }))
