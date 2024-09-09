@@ -7,6 +7,7 @@
 
 use anyhow::{Context as _, Result};
 use async_trait::async_trait;
+pub use aws_lambda_events::event::s3::S3Event;
 /// Re-export from [aws_lambda_events::event::sqs::SqsEvent], with [RunnableEventType] implemented.
 pub use aws_lambda_events::event::sqs::SqsEvent;
 use clap::Parser;
@@ -147,6 +148,17 @@ impl<T: StepFunctionEvent, MsgResult> RunnableEventType<T, MsgResult, MsgResult>
         Fut: Future<Output = Result<MsgResult>>,
     {
         message_handler(self.clone(), ctx).await
+    }
+}
+
+#[async_trait(?Send)]
+impl RunnableEventType<S3Event, (), ()> for S3Event {
+    async fn process<F, Fut, Context>(&self, message_handler: F, ctx: Arc<Context>) -> Result<()>
+    where
+        F: Fn(S3Event, Arc<Context>) -> Fut,
+        Fut: Future<Output = Result<()>>,
+    {
+        Ok(message_handler(self.clone(), ctx).await?)
     }
 }
 
