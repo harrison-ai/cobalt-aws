@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.14.0
+
+  - Added `S3Event` as a `RunnableEventType`.
+  - Updated rust crate `derive_more` to `v1`.
+  - Updated rust crate `lambda_runtime` to `0.13.0`.
+  - Updated rust crate `typed-builder` to `0.20.0`.
+
 ## 0.13.5
 
  - Changed return type of `s3::get_object` to `Result<S3AsyncBufReader, SdkError<GetObjectError>>`, where `S3AsyncBufReader` implements `AsyncBufRead`.
