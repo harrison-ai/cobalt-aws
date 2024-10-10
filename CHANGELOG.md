@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
   - **Breaking:** Removed the deprecated functions `sqs::get_client()`, `s3::get_client()`, and `athena::get_client()`.
+  - Updated all dependencies to the latest versions.
 
 ## 0.14.0
 
