@@ -107,10 +107,8 @@ impl AsRef<str> for SQSQueueName {
 
 #[derive(Error, Debug)]
 pub enum SQSQueueNameError {
-    #[error("Min length is 1")]
-    TooShort,
-    #[error("Max length is 80 characters")]
-    TooLong,
+    #[error("Invalid length, expected between 1 and 80 characters, received: {0}")]
+    InvalidLength(usize),
     #[error("The following characters are accepted: alphanumeric characters, hyphens (-), and underscores (_)")]
     InvalidCharacters,
 }
@@ -122,9 +120,9 @@ impl FromStr for SQSQueueName {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() > MAX_QUEUE_NAME_LENGTH {
-            Err(SQSQueueNameError::TooLong)
+            Err(SQSQueueNameError::InvalidLength(s.len()))
         } else if s.is_empty() {
-            Err(SQSQueueNameError::TooShort)
+            Err(SQSQueueNameError::InvalidLength(0))
         } else if !s
             .chars()
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
