@@ -2,7 +2,11 @@
 
 use anyhow::Result;
 use aws_sdk_sqs::types::SendMessageBatchRequestEntry;
+use derive_more::{Display, From};
 use futures::{Stream, StreamExt, TryFutureExt, TryStreamExt};
+use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+use thiserror::Error;
 
 /// Re-export of [aws_sdk_sqs::client::Client](https://docs.rs/aws-sdk-sqs/latest/aws_sdk_sqs/client/struct.Client.html).
 ///
@@ -44,7 +48,7 @@ const BATCH_SIZE: usize = 10;
 /// API to send message in batches of 10, which is the maximum allowed batch size.
 pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item = Result<Msg>>>(
     client: &Client,
-    queue_name: &str,
+    queue_name: &SQSQueueName,
     concurrency: Option<usize>,
     msg_stream: St,
 ) -> Result<()> {
@@ -53,7 +57,7 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
     }
     let queue_url = client
         .get_queue_url()
-        .queue_name(queue_name)
+        .queue_name(queue_name.to_string())
         .send()
         .await?
         .queue_url
@@ -85,6 +89,51 @@ pub async fn send_messages_concurrently<Msg: serde::Serialize, St: Stream<Item =
         .await
 }
 
+/// The name of an AWS SQS queue.
+///
+/// The `FromStr`` implementation of this type ensures the value is a valid AWS
+/// SQS name. This means it is between 1 and 80 characters, and only contains
+/// alphanumberic characters, hyphens (-), and underscores (_).
+///
+/// Ref: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/quotas-queues.html
+#[derive(Clone, Debug, Display, From, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SQSQueueName(String);
+
+impl AsRef<str> for SQSQueueName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum SQSQueueNameError {
+    #[error("Invalid length, expected between 1 and 80 characters, received: {0}")]
+    InvalidLength(usize),
+    #[error("The following characters are accepted: alphanumeric characters, hyphens (-), and underscores (_)")]
+    InvalidCharacters,
+}
+
+const MAX_QUEUE_NAME_LENGTH: usize = 80;
+
+impl FromStr for SQSQueueName {
+    type Err = SQSQueueNameError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() > MAX_QUEUE_NAME_LENGTH {
+            Err(SQSQueueNameError::InvalidLength(s.len()))
+        } else if s.is_empty() {
+            Err(SQSQueueNameError::InvalidLength(0))
+        } else if !s
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            Err(SQSQueueNameError::InvalidCharacters)
+        } else {
+            Ok(SQSQueueName(s.to_string()))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test_send_messages {
     use crate::{config::load_from_env, localstack};
@@ -106,10 +155,10 @@ mod test_send_messages {
         aws_sdk_sqs::Client::new(&shared_config)
     }
 
-    async fn consume_queue(client: &Client, queue_name: &str) -> Vec<usize> {
+    async fn consume_queue(client: &Client, queue_name: &SQSQueueName) -> Vec<usize> {
         let queue_url = client
             .get_queue_url()
-            .queue_name(queue_name)
+            .queue_name(queue_name.to_string())
             .send()
             .await
             .unwrap()
@@ -168,7 +217,7 @@ mod test_send_messages {
 
         let item_stream = stream::iter(vec![Ok::<u32, _>(1), Ok(2), Ok(3)]);
 
-        let queue_name = "non-existent-queue";
+        let queue_name = &SQSQueueName::from_str("non-existent-queue").unwrap();
 
         let result = send_messages_concurrently(&client, queue_name, None, item_stream).await;
         let e = result.unwrap_err();
@@ -194,7 +243,7 @@ mod test_send_messages {
             Ok(3),
         ]);
 
-        let queue_name = "test-queue";
+        let queue_name = &SQSQueueName::from_str("test-queue").unwrap();
 
         let result = send_messages_concurrently(&client, queue_name, None, item_stream).await;
         let e = result.unwrap_err();
@@ -211,7 +260,7 @@ mod test_send_messages {
 
         let item_stream = stream::iter((0..5).map(Ok));
 
-        let queue_name = "test-queue";
+        let queue_name = &SQSQueueName::from_str("test-queue").unwrap();
 
         let result = send_messages_concurrently(&client, queue_name, None, item_stream).await;
         result.unwrap();
@@ -227,7 +276,7 @@ mod test_send_messages {
 
         let item_stream = stream::iter((0..25).map(Ok));
 
-        let queue_name = "test-queue";
+        let queue_name = &SQSQueueName::from_str("test-queue").unwrap();
 
         let result = send_messages_concurrently(&client, queue_name, None, item_stream).await;
         result.unwrap();
@@ -243,7 +292,7 @@ mod test_send_messages {
 
         let item_stream = stream::iter((0..105).map(Ok));
 
-        let queue_name = "test-queue";
+        let queue_name = &SQSQueueName::from_str("test-queue").unwrap();
 
         let result = send_messages_concurrently(&client, queue_name, Some(5), item_stream).await;
         result.unwrap();
@@ -259,7 +308,7 @@ mod test_send_messages {
 
         let item_stream = stream::iter((0..105).map(Ok));
 
-        let queue_name = "test-queue";
+        let queue_name = &SQSQueueName::from_str("test-queue").unwrap();
 
         let result = send_messages_concurrently(&client, queue_name, Some(0), item_stream).await;
         let e = result.unwrap_err();
@@ -268,5 +317,99 @@ mod test_send_messages {
 
         let values = consume_queue(&client, queue_name).await;
         assert!(values.is_empty());
+    }
+}
+
+// This module provides generators for property-based testing.
+// This module provides generators for property-based testing. It is made publicly available
+// under the `test-support` feature flag and during test compilation. This approach ensures
+// that external modules and other crates can optionally include and utilize these generators
+// for their testing purposes when the `test-utils` feature is enabled or during the crate's
+// own test runs. This feature-guarded accessibility helps maintain clean separation between
+// test utilities and production code while enabling code reuse in testing contexts.
+#[cfg(any(test, feature = "test-utils"))]
+mod test_support {
+    use super::*;
+    use proptest::prelude::*;
+    use proptest::strategy::{BoxedStrategy, Strategy};
+
+    // Arbitrary implementation for SQSQueueName for testing
+    impl Arbitrary for SQSQueueName {
+        type Parameters = ();
+        type Strategy = BoxedStrategy<Self>;
+
+        fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+            let pattern = "[a-zA-Z0-9_-]{1,80}";
+            proptest::string::string_regex(pattern)
+                .expect("Invalid regex pattern for SQSQueueName")
+                .prop_map(|s| SQSQueueName::from_str(&s).unwrap())
+                .boxed()
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn sqs_name_arbitrary_invalid() -> BoxedStrategy<String> {
+        let too_short = Just("".to_string()); // Too short
+
+        let too_long = "a".repeat(MAX_QUEUE_NAME_LENGTH + 1); // Too long
+        let too_long = Just(too_long);
+
+        let invalid_chars = "[*?%!]{1,10}"; // Contains invalid characters
+        let invalid_chars = proptest::string::string_regex(invalid_chars)
+            .expect("Invalid regex pattern for generating invalid SQSQueueName");
+
+        prop_oneof![too_short, too_long, invalid_chars].boxed()
+    }
+}
+
+#[cfg(test)]
+mod prop_tests {
+    /**
+    Module containing property-based tests for the paraent module.
+
+    In these tests, `prop_assert!` is used extensively for a few key reasons:
+
+    1. **Integration with `proptest`**: Unlike `assert!` or `assert_eq!`, `prop_assert!`
+       and its variants (e.g., `prop_assert_eq!`) are designed to work seamlessly
+       within the `proptest` framework. They handle failure reporting in a way that
+       integrates with `proptest`'s test case reduction mechanisms, making it easier
+       to diagnose and understand failures.
+
+    2. **Test Case Reduction**: When a `prop_assert!` fails, `proptest` attempts to
+       "shrink" the input data to the smallest case that still causes the assertion
+       to fail. This simplification process is crucial for debugging and is a major
+       advantage of property-based testing. `prop_assert!` ensures that shrinking
+       behavior works correctly.
+
+    3. **Custom Failure Messages**: Like `assert!`, `prop_assert!` allows for custom
+       failure messages. This feature is particularly useful in complex tests where
+       the default error message may not provide enough context about the failure.
+
+    Using `prop_assert!` correctly is essential for leveraging the full power of
+    property-based testing with `proptest`.
+    */
+    use super::test_support::*;
+    use crate::sqs::SQSQueueName;
+    use assert_matches::assert_matches;
+    use proptest::prelude::*;
+    use std::str::FromStr;
+
+    proptest! {
+
+        // Tests that serialization and deserialization of `SQSQueueName` is symmetric,
+        // ensuring that any `SQSQueueName` can be round-tripped to JSON and back without loss.
+        #[test]
+        fn sqs_name_round_trip_test(queue_name: SQSQueueName) {
+            let serialized = serde_json::to_string(&queue_name).expect("SQS queue name should be valid");
+            let deserialized:  SQSQueueName = serde_json::from_str(&serialized).expect("Input json should be valid");
+            prop_assert_eq!(deserialized, queue_name);
+        }
+
+        //Invalid SQSNames should fail
+        #[test]
+        fn test_invalid_sqs_name(invalid_str in sqs_name_arbitrary_invalid()) {
+            assert_matches!(SQSQueueName::from_str(&invalid_str), Err(_))
+        }
+
     }
 }

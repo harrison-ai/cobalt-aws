@@ -22,6 +22,8 @@ s3 = ["aws-smithy-async", "aws-sdk-s3"]
 sqs = ["aws-sdk-sqs"]
 athena = ["aws-sdk-athena"]
 lambda = ["aws_lambda_events"]
+test-utils = ["proptest"]
+
 
 [dependencies]
 anyhow = "1.0.89"
@@ -44,6 +46,7 @@ either = "1.13.0"
 futures = "0.3.31"
 http = "1.1.0"
 lambda_runtime = "0.13.0"
+proptest = { version = "1.5.0", optional = true }
 serde = "1.0.210"
 serde_json = "1.0.128"
 thiserror = "1.0.64"
@@ -54,6 +57,7 @@ typed-builder = "0.20.0"
 url = { version = "2.5.2", features = ["serde"] }
 
 [dev-dependencies]
+assert_matches = "1.5.0"
 function_name = "0.3.0"
 proptest = "1.5.0"
 rand = "0.8.5"
