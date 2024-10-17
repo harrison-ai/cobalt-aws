@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.15.0
+
   - Added the new-type `SQSQueueName(String)`, which includes validation on its `FromStr` implementation.
   - **Breaking:** The `queue_name` argument to `send_messages_concurrently()` has changed from `&str` to `&SQSQueueName`.
   - **Breaking:** Removed the deprecated functions `sqs::get_client()`, `s3::get_client()`, and `athena::get_client()`.
