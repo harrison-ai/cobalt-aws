@@ -16,7 +16,7 @@ use aws_sdk_s3::{
     Client,
 };
 use bytesize::{GIB, MIB};
-use derivative::Derivative;
+use derive_more::Debug;
 use futures::{
     future::BoxFuture,
     io::{Error, ErrorKind},
@@ -37,15 +37,14 @@ type CompleteMultipartUploadFuture<'a> =
     BoxFuture<'a, Result<CompleteMultipartUploadOutput, SdkError<CompleteMultipartUploadError>>>;
 
 /// Holds state for the [AsyncMultipartUpload]
-#[derive(Derivative)]
-#[derivative(Debug)]
+#[derive(Debug)]
 enum AsyncMultipartUploadState<'a> {
     /// Use this in mem::swap to avoid split borrows
     None,
     ///Bytes are being written
     Writing {
         /// Multipart Uploads that are running
-        #[derivative(Debug = "ignore")]
+        #[debug(skip)]
         uploads: Vec<MultipartUploadFuture<'a>>,
         /// Bytes waiting to be written.
         buffer: Vec<u8>,
@@ -56,12 +55,12 @@ enum AsyncMultipartUploadState<'a> {
     },
     /// close() has been called and parts are still uploading.
     CompletingParts {
-        #[derivative(Debug = "ignore")]
+        #[debug(skip)]
         uploads: Vec<MultipartUploadFuture<'a>>,
         completed_parts: Vec<CompletedPart>,
     },
     /// All parts have been uploaded and the CompleteMultipart is returning.
-    Completing(#[derivative(Debug = "ignore")] CompleteMultipartUploadFuture<'a>),
+    Completing(#[debug(skip)] CompleteMultipartUploadFuture<'a>),
     // We have completed writing to S3.
     Closed,
 }
