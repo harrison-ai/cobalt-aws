@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 0.15.1
 
   - Replaced use of the unmaintained `derivative` crate with `derive_more`.
+  - Updated rust crate `thiserror` to `v2`.
 
 ## 0.15.0
 
