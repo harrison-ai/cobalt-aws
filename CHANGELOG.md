@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.15.1
+
+  - Replaced use of the unmaintained `derivative` crate with `derive_more`.
+
 ## 0.15.0
 
   - Added the new-type `SQSQueueName(String)`, which includes validation on its `FromStr` implementation.

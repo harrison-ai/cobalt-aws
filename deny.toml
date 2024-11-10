@@ -15,7 +15,8 @@ allow = [
     "ISC",
     "OpenSSL",
     "Unicode-DFS-2016",
-    "Zlib"
+    "Zlib",
+    "Unicode-3.0"
 ]
 
 # The `ring` crate has a complicated license situation with different licenses
