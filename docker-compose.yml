@@ -1,7 +1,7 @@
 services:
 
   cargo:
-    image: ghcr.io/harrison-ai/rust:1.82-0.0
+    image: ghcr.io/harrison-ai/rust:1.86-0.0
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
