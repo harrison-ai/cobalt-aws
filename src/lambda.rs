@@ -213,7 +213,7 @@ impl<Msg> RunnableEventType<Msg, (), ()> for SqsEvent {
 /// To write a message handler, you need to define four elements:
 ///
 /// * The `Message` structure, which defines the structure of the messages which will be sent to the SQS
-///    queue, and then forwarded on to your Lambda.
+///   queue, and then forwarded on to your Lambda.
 /// * The `Env` structure, which defines the expected environment variables your Lambda will receive.
 /// * The `Context` structure, which is provided the `Env` structure, and represents the shared state
 ///   that will be passed into your message handler. This structure needs to implement the [LambdaContext] trait.
