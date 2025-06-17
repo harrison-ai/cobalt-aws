@@ -40,7 +40,7 @@ bytes = "1.7.2"
 bytesize = "2.0.0"
 clap = { version = "4.5.20", features = ["derive", "env"] }
 conv = "0.3.3"
-derive_more = { version = "1.0.0", features = ["as_ref", "debug", "display", "from", "into"] }
+derive_more = { version = "2.0.0", features = ["as_ref", "debug", "display", "from", "into"] }
 either = "1.13.0"
 futures = "0.3.31"
 http = "1.1.0"
