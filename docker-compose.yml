@@ -1,7 +1,7 @@
 services:
 
   cargo:
-    image: ghcr.io/harrison-ai/rust:1.82-0.0
+    image: ghcr.io/harrison-ai/rust:1.86-0.0
     entrypoint: cargo
     volumes:
       - '~/.cargo/registry:/usr/local/cargo/registry'
@@ -36,7 +36,7 @@ services:
       - localstack
 
   localstack:
-    image: localstack/localstack:3.8.1
+    image: localstack/localstack:4.5.0
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack-main}"
     ports:
       - "127.0.0.1:4566:4566"            # LocalStack Gateway

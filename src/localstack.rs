@@ -148,5 +148,6 @@ mod test {
             }
         }
         .unwrap();
+        safe_get_endpoint_uri(Some("localstack".into()), Some("4566".into())).unwrap();
     }
 }
