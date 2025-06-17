@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.15.3
+
+  - Updated rust crate `bytesize` to `2.0.0`.
+  - Updated rust crate `derive_more` to `2.0.0`.
+  - Updated rust crate `lambda_runtime` to `0.14.0`.
+  - Updated rust crate `typed-builder` to `0.21.0`.
+
 ## 0.15.2
 
   - Updated rust crate `aws_lambda_events` to `0.16.0`.
