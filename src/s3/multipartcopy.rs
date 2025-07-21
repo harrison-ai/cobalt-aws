@@ -734,7 +734,7 @@ mod tests {
     }
 
     fn generate_random_bytes(length: usize, rng: &mut impl Rng) -> Vec<u8> {
-        (0..length).map(|_| rng.gen()).collect()
+        (0..length).map(|_| rng.random()).collect()
     }
 
     #[proptest]

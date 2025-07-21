@@ -179,7 +179,7 @@ mod test {
         types::{BucketLocationConstraint, CreateBucketConfiguration},
         Client,
     };
-    use rand::distributions::{Alphanumeric, DistString};
+    use rand::distr::{Alphanumeric, SampleString};
     use rand::Rng;
     use rand::SeedableRng;
     use rand_chacha::ChaCha8Rng;
