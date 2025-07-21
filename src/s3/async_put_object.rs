@@ -8,7 +8,7 @@ use aws_sdk_s3::{
     types::ObjectCannedAcl,
 };
 use futures::{
-    io::{Error, ErrorKind},
+    io::Error,
     ready,
     task::{Context, Poll},
     AsyncWrite, Future,
@@ -82,8 +82,7 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
                 self.buf.extend(buf);
                 Poll::Ready(Ok(buf.len()))
             }
-            _ => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            _ => Poll::Ready(Err(Error::other(
                 "Attempted to .write() writer after .close().",
             ))),
         }
@@ -92,8 +91,7 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), Error>> {
         match self.state {
             PutObjectState::Writing => Poll::Ready(Ok(())),
-            _ => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            _ => Poll::Ready(Err(Error::other(
                 "Attempted to .flush() writer after .close().",
             ))),
         }
@@ -124,14 +122,13 @@ impl<'a> AsyncWrite for AsyncPutObject<'a> {
             PutObjectState::Closing(ref mut fut) => {
                 let result = ready!(Pin::new(fut).poll(cx))
                     .map(|_| ())
-                    .map_err(|e| Error::new(ErrorKind::Other, e));
+                    .map_err(Error::other);
                 self.state = PutObjectState::Closed;
                 Poll::Ready(result)
             }
-            PutObjectState::Closed => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
-                "Attempted to .close() writer twice.",
-            ))),
+            PutObjectState::Closed => {
+                Poll::Ready(Err(Error::other("Attempted to .close() writer twice.")))
+            }
         }
     }
 }

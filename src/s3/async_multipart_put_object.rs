@@ -19,7 +19,7 @@ use bytesize::{GIB, MIB};
 use derive_more::Debug;
 use futures::{
     future::BoxFuture,
-    io::{Error, ErrorKind},
+    io::Error,
     task::{Context, Poll},
     AsyncWrite, Future, FutureExt, TryFutureExt,
 };
@@ -304,7 +304,7 @@ impl<'a> AsyncMultipartUpload<'a> {
     ) -> Result<Vec<CompletedPart>, Error> {
         complete_results
             .into_iter()
-            .map(|r| r.map_err(|e| Error::new(ErrorKind::Other, e)))
+            .map(|r| r.map_err(Error::other))
             .map(|r| {
                 r.map(|(c, part_number)| {
                     CompletedPart::builder()
@@ -412,14 +412,10 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                 //Return number of bytes written from the input
                 Poll::Ready(Ok(bytes_to_write))
             }
-            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::other(
                 "Attempted to .write() when state is None",
             ))),
-            _ => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
-                "Attempted to .write() after .close().",
-            ))),
+            _ => Poll::Ready(Err(Error::other("Attempted to .write() after .close()."))),
         }
     }
 
@@ -444,12 +440,10 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                     Poll::Pending
                 }
             }
-            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::other(
                 "Attempted to .write() when state is None",
             ))),
-            _ => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            _ => Poll::Ready(Err(Error::other(
                 "Attempted to .flush() writer after .close().",
             ))),
         }
@@ -548,16 +542,14 @@ impl<'a> AsyncWrite for AsyncMultipartUpload<'a> {
                     }
                     Poll::Ready(Err(e)) => {
                         self.state = AsyncMultipartUploadState::Closed;
-                        Poll::Ready(Err(Error::new(ErrorKind::Other, e)))
+                        Poll::Ready(Err(Error::other(e)))
                     }
                 }
             }
-            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            AsyncMultipartUploadState::None => Poll::Ready(Err(Error::other(
                 "Attempted to .close() writer with state None",
             ))),
-            AsyncMultipartUploadState::Closed => Poll::Ready(Err(Error::new(
-                ErrorKind::Other,
+            AsyncMultipartUploadState::Closed => Poll::Ready(Err(Error::other(
                 "Attempted to .close() writer after .close().",
             ))),
         }
