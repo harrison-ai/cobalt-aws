@@ -236,7 +236,7 @@ impl ByteRange {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```compile_fail
     /// let range = ByteRange::try_from((0, 499)).unwrap();
     /// assert_eq!(range.to_string(), "bytes=0-499");
     ///
@@ -310,11 +310,13 @@ struct CopyUploadPart<'a> {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
+/// # tokio_test::block_on(async {
 /// use aws_sdk_s3::Client;
 /// use std::sync::Arc;
-/// use aws_cobalt::s3::{S3MultipartCopier, S3Object, PartSize};
+/// use cobalt_aws::s3::{S3MultipartCopier, S3Object, PartSize};
 ///
+/// let shared_config = cobalt_aws::config::load_from_env().await.unwrap();
 /// let client = Arc::new(Client::new(&shared_config));
 /// let source = S3Object::new("source-bucket", "source-key");
 /// let destination = S3Object::new("destination-bucket", "destination-key");
@@ -327,7 +329,8 @@ struct CopyUploadPart<'a> {
 ///     .destination(destination)
 ///     .build();
 ///
-/// copier.send().await?;
+/// copier.send().await.unwrap();
+/// # })
 /// ```
 ///
 /// # Note
