@@ -116,7 +116,7 @@ pub trait RunnableEventType<Msg, MsgResult, EventResult> {
 ///
 /// # Example
 ///
-/// ``` no_run
+/// ```compile_fail
 /// use async_trait::async_trait;
 /// use cobalt_aws::lambda::StepFunctionEvent;
 /// use serde::{Deserialize, Serialize};

@@ -27,7 +27,8 @@ const BATCH_SIZE: usize = 10;
 /// ```no_run
 /// use aws_config;
 /// use futures::stream;
-/// use cobalt_aws::sqs::{Client, send_messages_concurrently};
+/// use std::str::FromStr;
+/// use cobalt_aws::sqs::{Client, send_messages_concurrently, SQSQueueName};
 /// use cobalt_aws::config::load_from_env;
 ///
 /// # tokio_test::block_on(async {
@@ -35,7 +36,7 @@ const BATCH_SIZE: usize = 10;
 /// let client = Client::new(&shared_config);
 ///
 /// let messages = stream::iter(vec![Ok("Hello"), Ok("world")]);
-/// let queue_name = "MyQueue";
+/// let queue_name = &SQSQueueName::from_str("MyQueue").unwrap();
 ///
 /// // Send up to 4 concurrent API requests at once.
 /// send_messages_concurrently(&client, queue_name, Some(4), messages).await.unwrap();
