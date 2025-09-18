@@ -4,6 +4,9 @@
 [advisories]
 version = 2
 yanked = "deny"
+ignore = [
+    "RUSTSEC-2025-0058", # Unmaintained transitive dependency `custom_derive`: https://rustsec.org/advisories/RUSTSEC-2025-0058 https://github.com/DanielKeep/rust-conv/pull/14
+]
 
 [licenses]
 version = 2
