@@ -2,9 +2,21 @@
 use std::str::FromStr;
 
 // External crates
-use anyhow::{bail, Context, Error, Result};
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+#[derive(Debug, thiserror::Error)]
+#[allow(clippy::enum_variant_names)]
+pub enum S3ObjectError {
+    #[error("S3 URL must have a scheme of s3")]
+    UrlSchemeError,
+    #[error("S3 URL must have a host")]
+    UrlHostError,
+    #[error("S3 URL must have a path")]
+    UrlPathError,
+    #[error(transparent)]
+    UrlParseError(#[from] url::ParseError),
+}
 
 /// A bucket key pair for a S3Object, with conversion from S3 urls.
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
@@ -31,17 +43,17 @@ impl S3Object {
 /// Convert from an [Url] into a [S3Object]. The scheme
 /// must be `s3` and the `path` must not be empty.
 impl TryFrom<Url> for S3Object {
-    type Error = Error;
+    type Error = S3ObjectError;
 
     fn try_from(value: Url) -> Result<Self, Self::Error> {
         if value.scheme() != "s3" {
-            bail!("S3 URL must have a scheme of s3")
+            return Err(S3ObjectError::UrlSchemeError);
         }
-        let bucket = value.host_str().context("S3 URL must have host")?;
+        let bucket = value.host_str().ok_or(S3ObjectError::UrlHostError)?;
         let key = value.path();
 
         if key.is_empty() {
-            bail!("S3 URL must have a path")
+            return Err(S3ObjectError::UrlPathError);
         }
         Ok(S3Object::new(bucket, key))
     }
@@ -50,7 +62,7 @@ impl TryFrom<Url> for S3Object {
 /// Convert from a [&str] into a [S3Object].
 /// The [&str] must be a valid `S3` [Url].
 impl TryFrom<&str> for S3Object {
-    type Error = Error;
+    type Error = S3ObjectError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         value.parse::<Url>()?.try_into()
@@ -60,7 +72,7 @@ impl TryFrom<&str> for S3Object {
 /// Convert from [String] into a [S3Object].
 /// The [String] must be a valid `S3` [Url].
 impl TryFrom<String> for S3Object {
-    type Error = Error;
+    type Error = S3ObjectError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         value.parse::<Url>()?.try_into()
@@ -70,7 +82,7 @@ impl TryFrom<String> for S3Object {
 /// Convert from [&str] into a [S3Object].
 /// The [&str] must be a valid `S3` [Url].
 impl FromStr for S3Object {
-    type Err = Error;
+    type Err = S3ObjectError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         value.parse::<Url>()?.try_into()
@@ -118,7 +130,7 @@ mod tests {
         let url: url::Url = "s3://test-bucket"
             .parse()
             .expect("Expected successful URL parsing");
-        let result: Result<S3Object> = url.try_into();
+        let result: Result<S3Object, S3ObjectError> = url.try_into();
         assert!(result.is_err())
     }
 
@@ -127,7 +139,7 @@ mod tests {
         let url: url::Url = "file://path/to/file"
             .parse()
             .expect("Expected successful URL parsing");
-        let result: Result<S3Object> = url.try_into();
+        let result: Result<S3Object, S3ObjectError> = url.try_into();
         assert!(result.is_err())
     }
 }
