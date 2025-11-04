@@ -34,6 +34,7 @@ pub use async_multipart_put_object::AsyncMultipartUpload;
 pub use async_put_object::AsyncPutObject;
 pub use multipartcopy::{PartSize, S3MultipartCopier, S3MultipartCopierError};
 pub use s3_object::S3Object;
+pub use s3_object::S3ObjectError;
 
 /// `FuturesStreamCompatByteStream` is a compatibility layer struct designed to wrap
 /// `ByteStream` from the `aws_sdk_s3`. This wrapper enables the use of `ByteStream`

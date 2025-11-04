@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.16.1
+
+  - Exported `S3ObjectError` publicly.
+
 ## 0.16.0
 
   - **Breaking change** Added `S3ObjectError`, which is now returned by all `S3Object` methods. Replaces the previous generic `anyhow::Error` return values.
