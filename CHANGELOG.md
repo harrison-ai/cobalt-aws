@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.17.
+
+  - Updated rust crate `lambda_runtime` to `1.0.0`.
+  - Updated rust crate `aws_lambda_events` to `1.0.0`.
+
 ## 0.16.1
 
   - Exported `S3ObjectError` publicly.
