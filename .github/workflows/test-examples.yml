@@ -11,7 +11,7 @@ jobs:
   test-examples:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Run hello world example
         env:
           LOCALSTACK_API_KEY: ${{ secrets.LOCALSTACK_API_KEY }}
